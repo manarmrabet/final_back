@@ -2,6 +2,8 @@ package com.example.CWMS.controller;
 
 import com.example.CWMS.payload.*;
 import com.example.CWMS.Security.JwtUtils;
+import com.example.CWMS.service.AuditService;  // ✅ import
+import jakarta.servlet.http.HttpServletRequest;  // ✅ import
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,19 +29,18 @@ public class AuthController {
     @Autowired
     private BCryptPasswordEncoder encoder;
 
-    @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+    @Autowired
+    private AuditService auditService;  // ✅ injecter AuditService
 
-        // --- DEBUG : Affiche le hash dans la console à chaque tentative ---
-        System.out.println("DEBUG: Mot de passe reçu: " + loginRequest.getPassword());
-        System.out.println("DEBUG: Hash attendu en base pour ce password: " + encoder.encode(loginRequest.getPassword()));
-        // -----------------------------------------------------------------
+    @PostMapping("/signin")
+    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest,
+                                              HttpServletRequest httpRequest) { // ✅ ajouter HttpServletRequest
 
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             loginRequest.getUsername(),
-                             loginRequest.getPassword()
+                            loginRequest.getPassword()
                     )
             );
 
@@ -50,12 +51,70 @@ public class AuthController {
                     .map(item -> item.getAuthority())
                     .collect(Collectors.toList());
 
+            // ✅ Log connexion réussie
+            auditService.logLogin(
+                    loginRequest.getUsername(),
+                    extractIp(httpRequest),
+                    httpRequest.getHeader("User-Agent"),
+                    true,
+                    null
+            );
+
             return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getUsername(), roles));
 
         } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Username or password incorrect");
+
+            // ✅ Log échec connexion
+            auditService.logLogin(
+                    loginRequest.getUsername(),
+                    extractIp(httpRequest),
+                    httpRequest.getHeader("User-Agent"),
+                    false,
+                    null
+            );
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Username or password incorrect");
+
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
         }
+    }
+
+    // ✅ Endpoint logout — Angular appelle ça avant de supprimer le token
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest httpRequest) {
+
+        // Récupérer le username depuis le token JWT
+        String username = extractUsernameFromToken(httpRequest);
+
+        // ✅ Log déconnexion
+        auditService.logLogout(
+                username,
+                extractIp(httpRequest),
+                null
+        );
+
+        return ResponseEntity.ok("Déconnecté avec succès");
+    }
+
+    // ── Utilitaires privés ──────────────────────────────────────
+
+    private String extractIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        return xff != null ? xff.split(",")[0].trim() : request.getRemoteAddr();
+    }
+
+    private String extractUsernameFromToken(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            try {
+                return jwtUtils.getUserNameFromJwtToken(header.substring(7));
+            } catch (Exception e) {
+                return "unknown";
+            }
+        }
+        return "unknown";
     }
 }
