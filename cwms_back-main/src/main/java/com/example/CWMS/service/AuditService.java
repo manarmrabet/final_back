@@ -25,23 +25,18 @@ import java.util.UUID;
 public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
-    private final UserRepository     userRepository;   // ✅ votre repo existant
-    private final ObjectMapper       objectMapper;
+    private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
-    // ──────────────────────────────────────────────
-    // CONNEXIONS
-    // ──────────────────────────────────────────────
-
-    public void logLogin(String username, String ip, String userAgent,
-                         boolean success, String sessionId) {
-
+    public void logLogin(String username, String ip, String userAgent, boolean success, String sessionId) {
         User user = userRepository.findByUsername(username).orElse(null);
 
         AuditLog auditLog = AuditLog.builder()
                 .eventType(success ? EventType.LOGIN : EventType.LOGIN_FAILED)
-                .severity (success ? Severity.INFO   : Severity.WARNING)
-                .user     (user)
-                .username (username)
+                .severity(success ? Severity.INFO : Severity.WARNING)
+                .action(success ? "CONNEXION_OK" : "TENTATIVE_ECHOUEE") // ✅ Ajouté pour le tableau
+                .user(user)
+                .username(username)
                 .ipAddress(ip)
                 .userAgent(userAgent)
                 .sessionId(sessionId)
@@ -56,9 +51,10 @@ public class AuditService {
 
         AuditLog auditLog = AuditLog.builder()
                 .eventType(EventType.LOGOUT)
-                .severity (Severity.INFO)
-                .user     (user)
-                .username (username)
+                .severity(Severity.INFO)
+                .action("DECONNEXION") // ✅ Ajouté
+                .user(user)
+                .username(username)
                 .ipAddress(ip)
                 .sessionId(sessionId)
                 .build();
@@ -66,96 +62,68 @@ public class AuditService {
         save(auditLog);
     }
 
-    // ──────────────────────────────────────────────
-    // ACTIONS CRITIQUES (CREATE / UPDATE / DELETE)
-    // ──────────────────────────────────────────────
-
-    public void logAction(String action, String entityType, String entityId,
-                          Object oldObj, Object newObj) {
+    public void logAction(String action, String entityType, String entityId, Object oldObj, Object newObj) {
         try {
             AuditLog.AuditLogBuilder builder = AuditLog.builder()
-                    .eventType (resolveEventType(action))
-                    .severity  (Severity.INFO)
-                    .action    (action)
+                    .eventType(resolveEventType(action))
+                    .severity(Severity.INFO)
+                    .action(action)
                     .entityType(entityType)
-                    .entityId  (entityId)
-                    .oldValue  (toJson(oldObj))
-                    .newValue  (toJson(newObj))
+                    .entityId(entityId)
+                    .oldValue(toJson(oldObj))
+                    .newValue(toJson(newObj))
                     .correlationId(UUID.randomUUID().toString());
 
             enrichWithCurrentUser(builder);
             save(builder.build());
-
         } catch (Exception e) {
             log.error("Erreur log action: {}", e.getMessage());
         }
     }
 
-    // ──────────────────────────────────────────────
-    // ERREURS HTTP
-    // ──────────────────────────────────────────────
-
     public void logError(Exception ex, HttpServletRequest request, int statusCode) {
         AuditLog.AuditLogBuilder builder = AuditLog.builder()
-                .eventType   (EventType.ERROR)
-                .severity    (statusCode >= 500 ? Severity.CRITICAL : Severity.ERROR)
-                .ipAddress   (extractClientIp(request))
-                .httpMethod  (request.getMethod())
-                .endpoint    (request.getRequestURI())
-                .statusCode  (statusCode)
+                .eventType(EventType.ERROR)
+                .severity(statusCode >= 500 ? Severity.CRITICAL : Severity.ERROR)
+                .ipAddress(extractClientIp(request))
+                .httpMethod(request.getMethod())
+                .endpoint(request.getRequestURI())
+                .statusCode(statusCode)
                 .errorMessage(ex.getMessage())
-                .stackTrace  (truncateStackTrace(ex));
+                .stackTrace(truncateStackTrace(ex));
 
         enrichWithCurrentUser(builder);
         save(builder.build());
     }
 
-    // ──────────────────────────────────────────────
-    // UTILITAIRES PRIVÉS
-    // ──────────────────────────────────────────────
-
-    /**
-     * Récupère l'utilisateur connecté depuis le SecurityContext
-     * et l'injecte dans le builder — utilise findByUsername() de votre UserRepository
-     */
     private void enrichWithCurrentUser(AuditLog.AuditLogBuilder builder) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-        if (auth != null && auth.isAuthenticated()
-                && !"anonymousUser".equals(auth.getPrincipal())) {
-
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
             String username = auth.getName();
-            builder.username(username); // snapshot systématique
-
-            // ✅ Charger l'entité User complète (userId, role, site disponibles)
+            builder.username(username);
             userRepository.findByUsername(username).ifPresent(builder::user);
         }
     }
 
     private void save(AuditLog auditLog) {
         try {
-            AuditLog saved = auditLogRepository.save(auditLog);
-            log.info("✅ Audit sauvegardé — id={} type={} user={}",
-                    saved.getId(), saved.getEventType(), saved.getUsername());
+            auditLogRepository.save(auditLog);
         } catch (Exception e) {
-            log.error("❌ Erreur sauvegarde audit: {}", e.getMessage(), e);
+            log.error("❌ Erreur sauvegarde audit: {}", e.getMessage());
         }
     }
 
     private String toJson(Object obj) {
         if (obj == null) return null;
-        try {
-            return objectMapper.writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
-            return obj.toString();
-        }
+        try { return objectMapper.writeValueAsString(obj); }
+        catch (JsonProcessingException e) { return obj.toString(); }
     }
 
     private EventType resolveEventType(String action) {
         if (action == null) return EventType.READ;
         String a = action.toUpperCase();
-        if (a.contains("CREATE") || a.contains("ADD"))    return EventType.CREATE;
-        if (a.contains("UPDATE") || a.contains("EDIT"))   return EventType.UPDATE;
+        if (a.contains("CREATE") || a.contains("ADD") || a.contains("SAVE")) return EventType.CREATE;
+        if (a.contains("UPDATE") || a.contains("EDIT") || a.contains("MODIF")) return EventType.UPDATE;
         if (a.contains("DELETE") || a.contains("REMOVE")) return EventType.DELETE;
         return EventType.READ;
     }

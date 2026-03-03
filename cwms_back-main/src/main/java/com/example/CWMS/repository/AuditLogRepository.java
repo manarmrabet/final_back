@@ -17,14 +17,14 @@ import java.util.List;
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
-    // ✅ findByUser utilise l'objet User directement (userId = Integer, conforme User.java)
+    // ✅ OK : Les méthodes de nommage automatique gèrent très bien le Pageable
     Page<AuditLog> findByUser(User user, Pageable pageable);
 
-    // ✅ Accès par userId (Integer, comme UserId dans User.java)
-    @Query("SELECT a FROM AuditLog a WHERE a.user.userId = :userId ORDER BY a.createdAt DESC")
+    // ✅ CORRIGÉ : Suppression du ORDER BY (conflit avec Pageable sur SQL Server)
+    @Query("SELECT a FROM AuditLog a WHERE a.user.userId = :userId")
     Page<AuditLog> findByUserId(@Param("userId") Integer userId, Pageable pageable);
 
-    // ✅ Historique connexions d'un user
+    // ✅ OK : Ici on peut garder le ORDER BY car on retourne une List (pas de Pageable)
     @Query("""
         SELECT a FROM AuditLog a
         WHERE a.user.userId = :userId
@@ -33,7 +33,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
         """)
     List<AuditLog> findConnectionsByUserId(@Param("userId") Integer userId);
 
-    // ✅ Détection brute force — username snapshot (fonctionne même sans FK résolue)
+    // ✅ OK : Requête de comptage simple
     @Query("""
         SELECT COUNT(a) FROM AuditLog a
         WHERE a.username  = :username
@@ -43,7 +43,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     long countRecentFailedLogins(@Param("username") String username,
                                  @Param("since") LocalDateTime since);
 
-    // ✅ Recherche multicritères
+    // ✅ CORRIGÉ : Suppression du ORDER BY final
     @Query("""
         SELECT a FROM AuditLog a
         WHERE (:eventType IS NULL OR a.eventType  = :eventType)
@@ -51,7 +51,6 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
           AND (:userId    IS NULL OR a.user.userId = :userId)
           AND (:from      IS NULL OR a.createdAt  >= :from)
           AND (:to        IS NULL OR a.createdAt  <= :to)
-        ORDER BY a.createdAt DESC
         """)
     Page<AuditLog> search(
             @Param("eventType") EventType     eventType,
