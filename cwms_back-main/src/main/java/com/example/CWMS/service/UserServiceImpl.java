@@ -50,16 +50,9 @@ public class UserServiceImpl implements UserService {
     public UserDTO createUser(UserDTO userDTO) {
         User user = new User();
 
-        // 1. Génération d'un mot de passe temporaire de 8 caractères
         String rawPassword = UUID.randomUUID().toString().substring(0, 8);
-
-        // 2. Mapping des champs de base
         updateUserFields(user, userDTO);
-
-        // 3. Hachage du mot de passe pour la sécurité
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
-
-        // Initialisation des champs de sécurité pour un nouveau compte
         user.setFailedAttempts(0);
         user.setAccountNonLocked(true);
         user.setCreatedAt(LocalDateTime.now());
@@ -68,10 +61,13 @@ public class UserServiceImpl implements UserService {
             user.setIsActive(true);
         }
 
-        User savedUser = userRepository.save(user);
+        // ⚠️ CHANGEMENT CLÉ : on valide l'email AVANT le save()
+        // Si isEmailReachable() retourne false → EmailValidationException levée
+        // → @Transactional fait le rollback → rien n'est enregistré en BDD
+        emailService.sendCredentials(userDTO.getEmail(), userDTO.getUserName(), rawPassword);
 
-        // 4. Envoi du mail avec les identifiants
-        emailService.sendCredentials(savedUser.getEmail(), savedUser.getUsername(), rawPassword);
+        // Cette ligne n'est atteinte QUE si l'email est valide
+        User savedUser = userRepository.save(user);
 
         return mapToDTO(savedUser);
     }
