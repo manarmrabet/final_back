@@ -60,7 +60,7 @@ public class AdminController {
         }
     }
 
-    @DeleteMapping("/users /{id}/force")
+    @DeleteMapping("/users/{id}/force")
     public ResponseEntity<?> forceDeleteUser(@PathVariable Integer id) {
         try {
             userService.forceDeleteUser(id);

@@ -3,6 +3,7 @@ package com.example.CWMS.config;
 import com.example.CWMS.Security.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -35,7 +36,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/signin").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()// Autorise login/register sans token
                         .requestMatchers("/api/audit/**").authenticated()
-                        .requestMatchers("/api/menu-items/me").authenticated()
+
+
+                        .requestMatchers(HttpMethod.GET, "/api/menu-items/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/menu-items/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/menu-items/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/menu-items/**").hasAuthority("ROLE_ADMIN")
+
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/user/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN", "ROLE_CONSULTATION")
                         .anyRequest().authenticated()

@@ -1,5 +1,6 @@
 package com.example.CWMS.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -7,6 +8,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "RoleMenuMappings")
 @Data
+@ToString(exclude = {"role", "menuItem"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -16,11 +18,13 @@ public class RoleMenuMapping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "RoleMenuMappingId")
     private Integer roleMenuMappingId;
-
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "RoleId", nullable = false)
     private Role role;
 
+
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "MenuItemId", nullable = false)
     private MenuItem menuItem;

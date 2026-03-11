@@ -1,16 +1,15 @@
 package com.example.CWMS.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Users")
 @Data
+@ToString(exclude = {"role"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -33,10 +32,14 @@ public class User {
     @Column(name = "LastName", length = 100)
     private String lastName;
 
+
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "RoleId")
     private Role role;
 
+
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "IdSite") //
     private Site site;
@@ -77,4 +80,3 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
 }
-

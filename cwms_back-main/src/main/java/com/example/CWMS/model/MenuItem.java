@@ -9,6 +9,7 @@ import java.util.List;
 @Entity
 @Table(name = "MenuItems")
 @Data
+@ToString(exclude = {"roleMappings", "parent"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
