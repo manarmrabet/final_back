@@ -22,4 +22,6 @@ public class UserDTO {
     private String        roleName;
     private String        siteName;
     private List<String>  authorities;
+    private boolean mustChangePassword;
+    private boolean credentialsSent;
 }

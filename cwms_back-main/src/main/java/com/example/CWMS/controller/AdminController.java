@@ -2,6 +2,7 @@ package com.example.CWMS.controller;
 
 import com.example.CWMS.dto.ApiResponse; // Import de ton DTO ApiResponse
 import com.example.CWMS.dto.UserDTO;
+import com.example.CWMS.iservice.EmailService;
 import com.example.CWMS.iservice.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,9 @@ public class AdminController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private EmailService emailService;  // ← Ajouté ici
 
     // 1. Dashboard : Simple message de bienvenue
     @GetMapping("/dashboard")
@@ -50,7 +54,10 @@ public class AdminController {
     public ResponseEntity<ApiResponse<UserDTO>> updateUser(@PathVariable Integer id, @RequestBody UserDTO userDTO) {
         UserDTO updatedUser = userService.updateUser(id, userDTO);
         return ResponseEntity.ok(ApiResponse.success("Utilisateur mis à jour", updatedUser));
-    }@DeleteMapping("/users/{id}")
+    }
+
+    // Suppression normale
+    @DeleteMapping("/users/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Integer id) {
         try {
             userService.deleteUser(id);
@@ -60,6 +67,7 @@ public class AdminController {
         }
     }
 
+    // Suppression forcée
     @DeleteMapping("/users/{id}/force")
     public ResponseEntity<?> forceDeleteUser(@PathVariable Integer id) {
         try {
@@ -67,6 +75,17 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("Utilisateur et traçabilité supprimés définitivement", null));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // NOUVEL ENDPOINT : Envoi / ré-envoi des identifiants
+    @PostMapping("/users/{id}/send-credentials")
+    public ResponseEntity<?> sendCredentials(@PathVariable Integer id) {
+        try {
+            emailService.sendOrResendCredentials(id);
+            return ResponseEntity.ok(ApiResponse.success("Identifiants générés et envoyés avec succès", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(ApiResponse.error(e.getMessage()));
         }
     }
 }

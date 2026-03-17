@@ -79,4 +79,10 @@ public class User {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    @Column(name = "must_change_password", nullable = false, columnDefinition = "boolean default true")
+    private boolean mustChangePassword = true;
+
+    @Column(name = "credentials_sent", nullable = false, columnDefinition = "boolean default false")
+    private boolean credentialsSent = false;
 }

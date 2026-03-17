@@ -68,22 +68,20 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Nom d'utilisateur déjà utilisé : " + userDTO.getUserName());
         }
 
-        // ✅ 3. Création normale
+        // ✅ 3. Création
         User user = new User();
-        String rawPassword = UUID.randomUUID().toString().substring(0, 8);
+        String rawPassword = UUID.randomUUID().toString().substring(0, 10);
+
         updateUserFields(user, userDTO);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setFailedAttempts(0);
         user.setAccountNonLocked(true);
         user.setCreatedAt(LocalDateTime.now());
-        if (user.getIsActive() == null) user.setIsActive(true);
-
-        // Envoi email AVANT save (rollback auto si email invalide)
-        emailService.sendCredentials(userDTO.getEmail(), userDTO.getUserName(), rawPassword);
+        user.setMustChangePassword(true);       // ← ajouté
+        user.setCredentialsSent(false);         // ← ajouté
 
         User savedUser = userRepository.save(user);
 
-        // Log audit succès
         auditService.logAction("USER_CREATED", "User",
                 String.valueOf(savedUser.getUserId()), null, mapToDTO(savedUser));
 
@@ -206,6 +204,10 @@ public class UserServiceImpl implements UserService {
 
         if (user.getRole() != null) dto.setRoleName(user.getRole().getRoleName());
         if (user.getSite() != null) dto.setSiteName(user.getSite().getSiteName());
+
+        dto.setMustChangePassword(user.isMustChangePassword());
+        dto.setCredentialsSent(user.isCredentialsSent());
+
         return dto;
     }
 }
