@@ -75,4 +75,8 @@ public interface TransferService {
     // ─── Dashboard ────────────────────────────────────────────────────────────
 
     TransferDashboardDTO getDashboard();
+
+
+    List<ErpStockDTO> getStockByLot(String lotNumber);
+    ErpLocationDTO    getLocationInfo(String locationCode);
 }

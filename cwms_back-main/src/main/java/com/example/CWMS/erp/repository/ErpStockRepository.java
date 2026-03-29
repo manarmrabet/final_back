@@ -1,6 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// FILE 1 : ErpStockRepository.java
-// ─────────────────────────────────────────────────────────────────────────────
 package com.example.CWMS.erp.repository;
 
 import com.example.CWMS.erp.entity.ErpStock;
@@ -14,56 +11,98 @@ import java.util.Optional;
 
 /**
  * Repository ERP Stock — Lecture seule.
- * Utilisé par TransferService pour valider le stock avant transfert.
+ *
+ * IMPORTANT : Les colonnes t_item et t_loca dans l'ERP contiennent
+ * souvent des espaces de remplissage (ex: 'FAI-001   ').
+ * Toutes les requêtes utilisent TRIM() pour éviter les 0 résultats.
+ * C'est la cause de l'erreur 403 : stock=0 → "Stock insuffisant".
  */
 @Repository
 public interface ErpStockRepository extends JpaRepository<ErpStock, Long> {
 
     /**
      * Stock d'un article dans un emplacement donné.
-     * Utilisé pour valider qu'il y a assez de stock avant transfert.
+     * FIX : TRIM sur t_item ET t_loca — l'ERP stocke des valeurs avec espaces.
      */
-    List<ErpStock> findByItemCodeAndLocation(String itemCode, String location);
+    @Query("""
+        SELECT s FROM ErpStock s
+        WHERE TRIM(s.itemCode) = TRIM(:itemCode)
+          AND TRIM(s.location) = TRIM(:location)
+        """)
+    List<ErpStock> findByItemCodeAndLocation(
+            @Param("itemCode") String itemCode,
+            @Param("location") String location);
 
     /**
      * Tout le stock d'un article (tous emplacements).
-     * Utilisé par le web pour afficher la carte de stock.
+     * FIX : TRIM sur t_item.
      */
-    List<ErpStock> findByItemCode(String itemCode);
+    @Query("""
+        SELECT s FROM ErpStock s
+        WHERE TRIM(s.itemCode) = TRIM(:itemCode)
+        ORDER BY s.location
+        """)
+    List<ErpStock> findByItemCode(@Param("itemCode") String itemCode);
 
     /**
-     * Tout le stock dans un emplacement (pour vue par zone).
+     * Tout le stock dans un emplacement.
      */
-    List<ErpStock> findByLocation(String location);
+    @Query("""
+        SELECT s FROM ErpStock s
+        WHERE TRIM(s.location) = TRIM(:location)
+        """)
+    List<ErpStock> findByLocation(@Param("location") String location);
 
     /**
      * Stock d'un article par lot dans un emplacement.
-     * Pour les transferts avec gestion de lot.
+     * FIX : TRIM sur les trois colonnes.
      */
+    @Query("""
+        SELECT s FROM ErpStock s
+        WHERE TRIM(s.itemCode) = TRIM(:itemCode)
+          AND TRIM(s.location) = TRIM(:location)
+          AND TRIM(s.lotNumber) = TRIM(:lotNumber)
+        """)
     Optional<ErpStock> findByItemCodeAndLocationAndLotNumber(
-            String itemCode, String location, String lotNumber);
+            @Param("itemCode")  String itemCode,
+            @Param("location")  String location,
+            @Param("lotNumber") String lotNumber);
 
     /**
      * Tous les lots d'un article dans un emplacement.
      */
+    @Query("""
+        SELECT s FROM ErpStock s
+        WHERE TRIM(s.itemCode) = TRIM(:itemCode)
+          AND TRIM(s.location) = TRIM(:location)
+        ORDER BY s.entryDate ASC
+        """)
     List<ErpStock> findByItemCodeAndLocationOrderByEntryDateAsc(
-            String itemCode, String location);
+            @Param("itemCode") String itemCode,
+            @Param("location") String location);
 
     /**
-     * Articles présents dans un emplacement (pour affichage inventaire zone).
+     * Articles présents dans un emplacement.
      */
-    @Query("SELECT DISTINCT s.itemCode FROM ErpStock s WHERE s.location = :location")
+    @Query("SELECT DISTINCT TRIM(s.itemCode) FROM ErpStock s WHERE TRIM(s.location) = TRIM(:location)")
     List<String> findDistinctItemCodesByLocation(@Param("location") String location);
 
     /**
-     * Résumé stock par emplacement pour un article — somme des quantités.
+     * Résumé stock par emplacement pour un article.
      * Retourne : [itemCode, location, sumQty]
      */
     @Query("""
-        SELECT s.itemCode, s.location, SUM(CAST(COALESCE(NULLIF(s.quantityAvailable,''),0) AS double))
+        SELECT TRIM(s.itemCode), TRIM(s.location),
+               SUM(CAST(COALESCE(NULLIF(TRIM(s.quantityAvailable),''), '0') AS double))
         FROM ErpStock s
-        WHERE s.itemCode = :itemCode
+        WHERE TRIM(s.itemCode) = TRIM(:itemCode)
         GROUP BY s.itemCode, s.location
         """)
     List<Object[]> findStockSummaryByItem(@Param("itemCode") String itemCode);
+    @Query("""
+        SELECT s FROM ErpStock s
+        WHERE TRIM(s.lotNumber) = TRIM(:lotNumber)
+        """)
+    List<ErpStock> findByLotNumber(@Param("lotNumber") String lotNumber);
+
 }

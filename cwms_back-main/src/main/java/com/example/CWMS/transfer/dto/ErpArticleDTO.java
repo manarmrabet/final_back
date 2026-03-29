@@ -1,11 +1,14 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// FILE 3 : ErpArticleDTO.java  (ERP → Web/Mobile)
-// ─────────────────────────────────────────────────────────────────────────────
 package com.example.CWMS.transfer.dto;
 
 import com.example.CWMS.erp.entity.ErpArticle;
 import lombok.*;
 
+/**
+ * DTO article ERP — mappé sur dbo_ttcibd001120.
+ *
+ * Champ "unit" = t_cuni (unité de stock).
+ * Le HTML Angular doit utiliser {{ art.unit }} et non art.storageUnit.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,19 +17,19 @@ public class ErpArticleDTO {
 
     private String itemCode;
     private String designation;
-    private String unit;          // t_cuqp (unité d'achat)
+    /** Unité de stock (t_cuni) */
+    private String unit;
     private String itemGroup;
-    private String defaultWarehouse;
-    private String itemStatus;
+    private String itemType;
 
     public static ErpArticleDTO from(ErpArticle a) {
+        if (a == null) return null;
         return ErpArticleDTO.builder()
-                .itemCode(a.getItemCode())
-                .designation(a.getDesignation())
-                .unit(a.getPurchaseUnit())
+                .itemCode(a.getItemCode()    != null ? a.getItemCode().trim()    : null)
+                .designation(a.getDesignation() != null ? a.getDesignation().trim() : "")
+                .unit(a.getStockUnit())
                 .itemGroup(a.getItemGroup())
-                .defaultWarehouse(a.getDefaultWarehouse())
-                .itemStatus(a.getItemStatus())
+                .itemType(a.getItemType())
                 .build();
     }
 }

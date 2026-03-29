@@ -23,6 +23,7 @@ public class ErpStockDTO {
     private LocalDate entryDate;
     private LocalDate lastTransactionDate;
     private String lineStatus;
+    private String itemLabel;   // désignation article depuis dbo_ttcibd001120
 
     public static ErpStockDTO from(ErpStock s) {
         return ErpStockDTO.builder()

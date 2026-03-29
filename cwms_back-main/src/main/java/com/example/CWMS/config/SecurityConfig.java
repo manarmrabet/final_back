@@ -17,16 +17,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
-/**
- * SecurityConfig — version mise à jour avec routes transfert + ERP.
- *
- * Règles de sécurité transfert :
- *   - Créer un transfert   : MAGASINIER, RESPONSABLE_MAGASIN, ADMIN
- *   - Valider / Annuler    : RESPONSABLE_MAGASIN, ADMIN seulement
- *   - Consulter transferts : tous les rôles authentifiés
- *   - Données ERP          : tous les rôles authentifiés
- *   - Dashboard            : RESPONSABLE_MAGASIN, ADMIN
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -44,37 +34,52 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 .authorizeHttpRequests(auth -> auth
 
-                        // ── Auth publique ────────────────────────────────
+                        // ── Auth publique ────────────────────────────────────────────
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // ── Audit ────────────────────────────────────────
+                        // ── ERP data (lecture) — tous les rôles authentifiés ─────────
+                        // Une seule règle, pas de contradictions
+
+                        .requestMatchers(HttpMethod.GET, "/api/transfers/erp/**").hasAnyAuthority(
+                                "ROLE_ADMIN", "ROLE_MAGASINIER",
+                                "ROLE_RESPONSABLE_MAGASIN", "ROLE_CONSULTATION")
+
+                        // ── Transferts — dashboard ────────────────────────────────────
+                        .requestMatchers(HttpMethod.GET, "/api/transfers/dashboard").hasAnyAuthority(
+                                "ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN")
+
+                        // ── Transferts — créer / batch ────────────────────────────────
+                        .requestMatchers(HttpMethod.POST, "/api/transfers/**").hasAnyAuthority(
+                                "ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN")
+
+                        // ── Transferts — valider / annuler ────────────────────────────
+                        .requestMatchers(HttpMethod.PUT, "/api/transfers/**").hasAnyAuthority(
+                                "ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN")
+
+                        // ── Transferts — consulter ────────────────────────────────────
+                        .requestMatchers(HttpMethod.GET, "/api/transfers/**").authenticated()
+
+                        // ── Audit ────────────────────────────────────────────────────
                         .requestMatchers("/api/audit/**").authenticated()
 
-                        // ── Menu ─────────────────────────────────────────
+                        // ── Menu ─────────────────────────────────────────────────────
                         .requestMatchers(HttpMethod.GET,    "/api/menu-items/**").authenticated()
                         .requestMatchers(HttpMethod.POST,   "/api/menu-items/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.PUT,    "/api/menu-items/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/menu-items/**").hasAuthority("ROLE_ADMIN")
 
-                        // ── Admin ────────────────────────────────────────
+                        // ── Admin ────────────────────────────────────────────────────
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
 
-                        // ── Users ────────────────────────────────────────
+                        // ── Users ────────────────────────────────────────────────────
                         .requestMatchers("/api/user/**").hasAnyAuthority(
                                 "ROLE_ADMIN", "ROLE_MAGASINIER",
                                 "ROLE_RESPONSABLE_MAGASIN", "ROLE_CONSULTATION")
 
-                        .requestMatchers(HttpMethod.GET, "/api/erp/**").authenticated()
-                        .requestMatchers("/api/transfers/dashboard").hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/transfers/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN")
-                        .requestMatchers(HttpMethod.POST, "/api/transfers/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN")
-                        .requestMatchers(HttpMethod.GET, "/api/transfers/**").authenticated()
-                        // === Important : autoriser aussi sans /api (ton Angular appelle sans /api) ===
-                        .requestMatchers(HttpMethod.GET, "/transfers/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/transfers/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN")
-                        .requestMatchers(HttpMethod.PUT, "/transfers/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN")
+                        // ── Tout le reste ─────────────────────────────────────────────
                         .anyRequest().authenticated()
                 );
 
@@ -84,17 +89,16 @@ public class SecurityConfig {
 
     @Bean
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // Web Angular + Mobile (émulateur Android = 10.0.2.2)
-        configuration.setAllowedOrigins(Arrays.asList(
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(Arrays.asList(
                 "http://localhost:4200",
                 "http://10.0.2.2:8080"
         ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
-        configuration.setAllowCredentials(true);
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
+        config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 

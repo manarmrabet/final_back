@@ -1,6 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// FILE 1 : ErpArticleRepository.java
-// ─────────────────────────────────────────────────────────────────────────────
 package com.example.CWMS.erp.repository;
 
 import com.example.CWMS.erp.entity.ErpArticle;
@@ -15,16 +12,15 @@ import java.util.Optional;
 @Repository
 public interface ErpArticleRepository extends JpaRepository<ErpArticle, String> {
 
-    /** Recherche par code exact (scan QR/barcode) */
-    Optional<ErpArticle> findByItemCode(String itemCode);
+    /** * Utilisation de TRIM pour ignorer les espaces vides stockés dans l'ERP
+     * Cela permet de trouver '10729202' même si la DB contient '10729202   '
+     */
+    @Query("SELECT a FROM ErpArticle a WHERE TRIM(a.itemCode) = TRIM(:itemCode)")
+    Optional<ErpArticle> findByItemCode(@Param("itemCode") String itemCode);
 
-    /** Recherche par désignation (recherche texte web) */
     List<ErpArticle> findByDesignationContainingIgnoreCase(String keyword);
-
-    /** Articles d'un groupe */
     List<ErpArticle> findByItemGroup(String group);
 
-    /** Recherche combinée code ou désignation */
     @Query("""
         SELECT a FROM ErpArticle a
         WHERE UPPER(a.itemCode) LIKE UPPER(CONCAT('%', :q, '%'))
