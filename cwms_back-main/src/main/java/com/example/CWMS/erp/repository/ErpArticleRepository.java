@@ -12,19 +12,24 @@ import java.util.Optional;
 @Repository
 public interface ErpArticleRepository extends JpaRepository<ErpArticle, String> {
 
-    /** * Utilisation de TRIM pour ignorer les espaces vides stockés dans l'ERP
-     * Cela permet de trouver '10729202' même si la DB contient '10729202   '
-     */
     @Query("SELECT a FROM ErpArticle a WHERE TRIM(a.itemCode) = TRIM(:itemCode)")
     Optional<ErpArticle> findByItemCode(@Param("itemCode") String itemCode);
 
     List<ErpArticle> findByDesignationContainingIgnoreCase(String keyword);
     List<ErpArticle> findByItemGroup(String group);
 
+    /**
+     * Recherche multicritère :
+     * Code Article OR Désignation OR Nom abrégé (seak) OR Nom abrégé 2 (seab)
+     */
     @Query("""
         SELECT a FROM ErpArticle a
-        WHERE UPPER(a.itemCode) LIKE UPPER(CONCAT('%', :q, '%'))
+        WHERE UPPER(TRIM(a.itemCode)) LIKE UPPER(CONCAT('%', :q, '%'))
            OR UPPER(a.designation) LIKE UPPER(CONCAT('%', :q, '%'))
+           OR UPPER(a.searchName) LIKE UPPER(CONCAT('%', :q, '%'))
+           OR UPPER(a.searchName2) LIKE UPPER(CONCAT('%', :q, '%'))
         """)
     List<ErpArticle> search(@Param("q") String query);
+
+
 }

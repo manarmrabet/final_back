@@ -24,11 +24,20 @@ public class ErpArticle {
     @Column(name = "t_cuni")
     private String stockUnit;
 
-    /** Ajout du champ manquant pour corriger l'erreur de compilation du DTO */
     @Column(name = "t_kitm")
     private String itemType;
 
-    /** Alias pour la compatibilité avec TransferServiceImpl */
+    @Column(name = "t_seak")
+    private String searchName;
+
+    @Column(name = "t_seab")
+    private String searchName2;
+
+    /** FIX: Cette méthode permet au service de récupérer le segment (SF, PF, PR) */
+    public String getItemCategory() {
+        return this.itemGroup;
+    }
+
     public String getPurchaseUnit() {
         return this.stockUnit;
     }

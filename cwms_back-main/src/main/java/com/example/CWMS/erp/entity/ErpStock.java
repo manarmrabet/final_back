@@ -4,19 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 
-/**
- * Entité ERP — Table dbo_twhinr1401200
- * Représente les mouvements/lignes de stock dans l'ERP.
- * READ ONLY — aucune méthode d'écriture ne doit utiliser cette entité.
- *
- * Colonnes clés pour le transfert interne :
- *   t_item  = code article
- *   t_loca  = emplacement actuel
- *   t_clot  = numéro de lot
- *   t_ball  = quantité disponible
- *   t_bout  = quantité sortie
- */
 @Entity
 @Table(name = "dbo_twhinr1401200")
 @Data
@@ -30,65 +20,82 @@ public class ErpStock {
     @Column(name = "id_stockage")
     private Long idStockage;
 
-    /** Code article — clé de jointure avec ErpArticle */
     @Column(name = "t_item")
     private String itemCode;
 
-    /** Emplacement physique (ex: ZONE-B1, MAG-A, RECEPTION) */
-    @Column(name = "t_loca")
-    private String location;
-
-    /** Numéro de lot */
-    @Column(name = "t_clot")
-    private String lotNumber;
-
-    /** Date d'entrée en stock */
-    @Column(name = "t_idat")
-    private LocalDate entryDate;
-
-    /** Quantité disponible en stock */
-    @Column(name = "t_ball")
-    private String quantityAvailable;
-
-    /** Quantité sortie */
-    @Column(name = "t_bout")
-    private String quantityOut;
-
-    /** Quantité bloquée/réservée */
-    @Column(name = "t_btri")
-    private String quantityBlocked;
-
-    /** Entrepôt / warehouse code */
     @Column(name = "t_cwar")
     private String warehouseCode;
 
-    /** Référence commande */
-    @Column(name = "t_qord")
-    private String orderRef;
+    @Column(name = "t_loca")
+    private String location;
 
-    /** Cycle de comptage */
-    @Column(name = "t_bcyc")
-    private String countCycle;
+    @Column(name = "t_clot")
+    private String lotNumber;
+    @Column(name = "t_idat")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date inventoryDateRaw;
 
-    /** Date de création enregistrement */
-    @Column(name = "t_crdt")
-    private LocalDate createdDate;
+    @Column(name = "t_qhnd")
+    private String quantityAvailableRaw;
 
-    /** Date dernière transaction */
-    @Column(name = "t_trdt")
-    private LocalDate lastTransactionDate;
+    @Column(name = "t_qblk")
+    private String quantityBlockedRaw;
 
-    /** Statut ligne stock */
+    @Column(name = "t_ball")
+    private Integer blockedAll;
+
+    @Column(name = "t_bout")
+    private Integer blockedOut;
     @Column(name = "t_lsid")
     private String lineStatus;
 
-    // Getters pratiques pour le service
-    public int getAvailableQuantityAsInt() {
-        try {
-            if (quantityAvailable == null || quantityAvailable.isBlank()) return 0;
-            return (int) Double.parseDouble(quantityAvailable.trim());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
+    /** Date d'entrée en stock */
+    @Column(name = "t_idat", insertable = false, updatable = false)
+    private LocalDate entryDate;
+
+    @Column(name = "t_trdt")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date lastTransactionDateRaw;
+
+    public double getQuantityAvailable() {
+        if (quantityAvailableRaw == null || quantityAvailableRaw.trim().isEmpty()) return 0.0;
+        try { return Double.parseDouble(quantityAvailableRaw.trim().replace(",", ".")); }
+        catch (Exception e) { return 0.0; }
     }
+
+    public double getQuantityBlocked() {
+        if (quantityBlockedRaw == null || quantityBlockedRaw.trim().isEmpty()) return 0.0;
+        try { return Double.parseDouble(quantityBlockedRaw.trim().replace(",", ".")); }
+        catch (Exception e) { return 0.0; }
+    }
+
+    public int getAvailableQuantityAsInt() { return (int) getQuantityAvailable(); }
+    public int getBlockedQuantityAsInt() { return (int) getQuantityBlocked(); }
+
+    public static String formatErpDate(Date date) {
+        if (date == null) return "N/A";
+        return new SimpleDateFormat("dd/MM/yyyy").format(date);
+    }
+
+    @Transient
+    public String getComputedStatus() {
+        if (getAvailableQuantityAsInt() <= 0) return "EMPTY";
+        if ((blockedAll != null && blockedAll > 0) || (blockedOut != null && blockedOut > 0)) return "BLOCKED";
+        if (getBlockedQuantityAsInt() > 0) return "PARTIAL_BLOCK";
+        return "AVAILABLE";
+    }
+    public String getLineStatus() {
+        return lineStatus != null ? lineStatus.trim() : "N/A";
+    }
+    public java.time.LocalDate getEntryDate() {
+        return inventoryDateRaw != null ?
+                new java.sql.Date(inventoryDateRaw.getTime()).toLocalDate() : null;
+    }
+
+    public java.time.LocalDate getLastTransactionDate() {
+        return lastTransactionDateRaw != null ?
+                new java.sql.Date(lastTransactionDateRaw.getTime()).toLocalDate() : null;
+    }
+
+
 }

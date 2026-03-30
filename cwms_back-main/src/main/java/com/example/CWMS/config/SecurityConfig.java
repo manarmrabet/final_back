@@ -16,6 +16,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,50 +37,42 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
+                        // 1. Routes Publiques (Authentification)
+                        .requestMatchers("/api/auth/**", "/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // ── Auth publique ────────────────────────────────────────────
-                        .requestMatchers("/api/auth/**").permitAll()
+                        // 2. STOCK ERP (Lecture / Consultation) - Accessible à tous les rôles authentifiés
+                        .requestMatchers(HttpMethod.GET, "/api/erp/stock/**", "/web/erp/stock/**", "/api/web/erp/stock/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN", "ROLE_CONSULTATION")
 
-                        // ── ERP data (lecture) — tous les rôles authentifiés ─────────
-                        // Une seule règle, pas de contradictions
+                        // 3. TRANSFERTS (Logic métier spécifique)
+                        // Dashboard et Validation (Actions sensibles)
+                        .requestMatchers("/api/transfers/dashboard", "/api/transfers/validate/**", "/api/transfers/cancel/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN")
 
-                        .requestMatchers(HttpMethod.GET, "/api/transfers/erp/**").hasAnyAuthority(
-                                "ROLE_ADMIN", "ROLE_MAGASINIER",
-                                "ROLE_RESPONSABLE_MAGASIN", "ROLE_CONSULTATION")
+                        // Création et Batch (Mobile/Flutter)
+                        .requestMatchers(HttpMethod.POST, "/api/transfers/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN")
 
-                        // ── Transferts — dashboard ────────────────────────────────────
-                        .requestMatchers(HttpMethod.GET, "/api/transfers/dashboard").hasAnyAuthority(
-                                "ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN")
+                        // Consultation des transferts (Historique)
+                        .requestMatchers(HttpMethod.GET, "/api/transfers/**")
+                        .authenticated()
 
-                        // ── Transferts — créer / batch ────────────────────────────────
-                        .requestMatchers(HttpMethod.POST, "/api/transfers/**").hasAnyAuthority(
-                                "ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN")
+                        // 4. MOUVEMENTS DE STOCK (Entrée/Sortie/Ajustement)
+                        .requestMatchers("/api/mouvements/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN")
 
-                        // ── Transferts — valider / annuler ────────────────────────────
-                        .requestMatchers(HttpMethod.PUT, "/api/transfers/**").hasAnyAuthority(
-                                "ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN")
-
-                        // ── Transferts — consulter ────────────────────────────────────
-                        .requestMatchers(HttpMethod.GET, "/api/transfers/**").authenticated()
-
-                        // ── Audit ────────────────────────────────────────────────────
+                        // 5. MENU ITEMS & AUDIT
+                        .requestMatchers(HttpMethod.GET, "/api/menu-items/**").authenticated()
+                        .requestMatchers("/api/menu-items/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/audit/**").authenticated()
 
-                        // ── Menu ─────────────────────────────────────────────────────
-                        .requestMatchers(HttpMethod.GET,    "/api/menu-items/**").authenticated()
-                        .requestMatchers(HttpMethod.POST,   "/api/menu-items/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT,    "/api/menu-items/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/menu-items/**").hasAuthority("ROLE_ADMIN")
-
-                        // ── Admin ────────────────────────────────────────────────────
-                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
-
-                        // ── Users ────────────────────────────────────────────────────
+                        // 6. ADMINISTRATION & UTILISATEURS
+                        .requestMatchers("/api/admin/**", "/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/user/**").hasAnyAuthority(
-                                "ROLE_ADMIN", "ROLE_MAGASINIER",
-                                "ROLE_RESPONSABLE_MAGASIN", "ROLE_CONSULTATION")
+                                "ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN", "ROLE_CONSULTATION")
 
-                        // ── Tout le reste ─────────────────────────────────────────────
+                        // 7. Sécurité par défaut
                         .anyRequest().authenticated()
                 );
 
@@ -90,13 +83,14 @@ public class SecurityConfig {
     @Bean
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList(
-                "http://localhost:4200",
-                "http://10.0.2.2:8080"
-        ));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
+
+        // Configuration large pour le développement (Mobile + Web)
+        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With"));
         config.setAllowCredentials(true);
+        config.setExposedHeaders(List.of("Authorization")); // Important pour récupérer le token si besoin
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
@@ -108,8 +102,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
-            throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 }
