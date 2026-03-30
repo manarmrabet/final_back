@@ -65,12 +65,15 @@ public class SecurityConfig {
                         // 5. MENU ITEMS & AUDIT
                         .requestMatchers(HttpMethod.GET, "/api/menu-items/**").authenticated()
                         .requestMatchers("/api/menu-items/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/audit/archives/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/audit/**").authenticated()
 
                         // 6. ADMINISTRATION & UTILISATEURS
                         .requestMatchers("/api/admin/**", "/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/user/**").hasAnyAuthority(
                                 "ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN", "ROLE_CONSULTATION")
+
+
 
                         // 7. Sécurité par défaut
                         .anyRequest().authenticated()

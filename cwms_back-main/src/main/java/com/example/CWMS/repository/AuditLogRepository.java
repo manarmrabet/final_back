@@ -4,6 +4,7 @@ import com.example.CWMS.model.AuditLog;
 import com.example.CWMS.model.AuditLog.EventType;
 import com.example.CWMS.model.AuditLog.Severity;
 import com.example.CWMS.model.User;
+import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -65,4 +66,13 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     @Modifying
     @Query("DELETE FROM AuditLog a WHERE a.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Integer userId);
+//archivage
+
+    @Query("SELECT a FROM AuditLog a WHERE a.createdAt < :cutoffDate")
+    List<AuditLog> findOldLogs(@Param("cutoffDate") LocalDateTime cutoffDate);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM AuditLog a WHERE a.createdAt < :cutoffDate")
+    void deleteOldLogs(@Param("cutoffDate") LocalDateTime cutoffDate);
 }
