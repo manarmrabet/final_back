@@ -1,6 +1,12 @@
-package com.example.CWMS.transfer.service;
+package com.example.CWMS.service;
 
 import com.example.CWMS.audit.Auditable;
+import com.example.CWMS.dto.TransferDashboardDTO;
+import com.example.CWMS.dto.TransferRequestDTO;
+import com.example.CWMS.dto.TransferResponseDTO;
+import com.example.CWMS.erp.dto.ErpArticleDTO;
+import com.example.CWMS.erp.dto.ErpLocationDTO;
+import com.example.CWMS.erp.dto.ErpStockDTO;
 import com.example.CWMS.erp.entity.ErpArticle;
 import com.example.CWMS.erp.entity.ErpEmplacement;
 import com.example.CWMS.erp.entity.ErpStock;
@@ -8,11 +14,11 @@ import com.example.CWMS.erp.repository.ErpArticleRepository;
 import com.example.CWMS.erp.repository.ErpEmplacementRepository;
 import com.example.CWMS.erp.repository.ErpStockRepository;
 import com.example.CWMS.erp.service.ErpStockUpdater;
+import com.example.CWMS.iservice.TransferService;
 import com.example.CWMS.model.User;
 import com.example.CWMS.repository.UserRepository;
-import com.example.CWMS.transfer.dto.*;
-import com.example.CWMS.transfer.model.StockTransfer;
-import com.example.CWMS.transfer.repository.StockTransferRepository;
+import com.example.CWMS.model.StockTransfer;
+import com.example.CWMS.repository.StockTransferRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

@@ -1,6 +1,5 @@
-package com.example.CWMS.transfer.model;
+package com.example.CWMS.model;
 
-import com.example.CWMS.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 

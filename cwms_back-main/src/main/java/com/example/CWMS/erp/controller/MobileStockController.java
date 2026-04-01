@@ -1,9 +1,8 @@
 package com.example.CWMS.erp.controller;
 
 import com.example.CWMS.erp.service.MobileStockService; // Import correct du nouveau service
-import com.example.CWMS.transfer.dto.ErpArticleSummaryDTO;
-import com.example.CWMS.transfer.dto.ErpLotLineDTO;
-import com.example.CWMS.transfer.dto.ErpStockDTO;
+import com.example.CWMS.erp.dto.ErpLotLineDTO;
+import com.example.CWMS.erp.dto.ErpStockDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

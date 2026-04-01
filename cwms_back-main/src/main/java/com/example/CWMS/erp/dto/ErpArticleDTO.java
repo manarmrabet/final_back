@@ -1,4 +1,4 @@
-package com.example.CWMS.transfer.dto;
+package com.example.CWMS.erp.dto;
 
 import com.example.CWMS.erp.entity.ErpArticle;
 import lombok.*;

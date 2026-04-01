@@ -1,8 +1,10 @@
 package com.example.CWMS.erp.service;
 
+import com.example.CWMS.erp.dto.ErpArticleSummaryDTO;
+import com.example.CWMS.erp.dto.ErpLotLineDTO;
+import com.example.CWMS.erp.dto.ErpStockDTO;
 import com.example.CWMS.erp.entity.*;
 import com.example.CWMS.erp.repository.*;
-import com.example.CWMS.transfer.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

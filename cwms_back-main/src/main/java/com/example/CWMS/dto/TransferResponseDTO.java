@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // FILE 2 : TransferResponseDTO.java  (Backend → Mobile/Web)
 // ─────────────────────────────────────────────────────────────────────────────
-package com.example.CWMS.transfer.dto;
+package com.example.CWMS.dto;
 
-import com.example.CWMS.transfer.model.StockTransfer;
+import com.example.CWMS.model.StockTransfer;
 import lombok.*;
 
 import java.time.LocalDateTime;

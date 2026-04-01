@@ -1,6 +1,6 @@
-package com.example.CWMS.transfer.repository;
+package com.example.CWMS.repository;
 
-import com.example.CWMS.transfer.model.StockTransfer;
+import com.example.CWMS.model.StockTransfer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -4,9 +4,9 @@ import com.example.CWMS.erp.entity.ErpArticle;
 import com.example.CWMS.erp.entity.ErpStock;
 import com.example.CWMS.erp.repository.ErpArticleRepository;
 import com.example.CWMS.erp.repository.ErpStockRepository;
-import com.example.CWMS.transfer.dto.ErpArticleSummaryDTO;
-import com.example.CWMS.transfer.dto.ErpLotLineDTO;
-import com.example.CWMS.transfer.dto.ErpStockDTO; // Import manquant sur tes captures
+import com.example.CWMS.erp.dto.ErpArticleSummaryDTO;
+import com.example.CWMS.erp.dto.ErpLotLineDTO;
+import com.example.CWMS.erp.dto.ErpStockDTO; // Import manquant sur tes captures
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

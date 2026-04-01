@@ -1,9 +1,9 @@
-package com.example.CWMS.transfer.service;
+package com.example.CWMS.service;
 
-import com.example.CWMS.transfer.model.StockTransfer;
-import com.example.CWMS.transfer.model.StockTransferArchive;
-import com.example.CWMS.transfer.repository.StockTransferArchiveRepository;
-import com.example.CWMS.transfer.repository.StockTransferRepository;
+import com.example.CWMS.model.StockTransfer;
+import com.example.CWMS.model.StockTransferArchive;
+import com.example.CWMS.repository.StockTransferArchiveRepository;
+import com.example.CWMS.repository.StockTransferRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

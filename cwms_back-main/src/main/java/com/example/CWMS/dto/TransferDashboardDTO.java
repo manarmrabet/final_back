@@ -1,4 +1,4 @@
-package com.example.CWMS.transfer.dto;
+package com.example.CWMS.dto;
 
 import lombok.*;
 import java.util.List;

@@ -1,8 +1,8 @@
-package com.example.CWMS.transfer.service;
+package com.example.CWMS.service;
 
-import com.example.CWMS.transfer.dto.TransferResponseDTO;
-import com.example.CWMS.transfer.model.StockTransferArchive;
-import com.example.CWMS.transfer.repository.StockTransferArchiveRepository;
+import com.example.CWMS.dto.TransferResponseDTO;
+import com.example.CWMS.model.StockTransferArchive;
+import com.example.CWMS.repository.StockTransferArchiveRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

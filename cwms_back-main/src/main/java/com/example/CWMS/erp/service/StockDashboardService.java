@@ -4,7 +4,7 @@ import com.example.CWMS.erp.entity.ErpArticle;
 import com.example.CWMS.erp.entity.ErpStock;
 import com.example.CWMS.erp.repository.ErpArticleRepository;
 import com.example.CWMS.erp.repository.ErpStockRepository;
-import com.example.CWMS.transfer.dto.ErpArticleSummaryDTO;
+import com.example.CWMS.erp.dto.ErpArticleSummaryDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

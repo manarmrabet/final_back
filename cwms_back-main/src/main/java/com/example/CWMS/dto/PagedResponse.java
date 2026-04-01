@@ -1,4 +1,4 @@
-package com.example.CWMS.transfer.dto;
+package com.example.CWMS.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.domain.Page;

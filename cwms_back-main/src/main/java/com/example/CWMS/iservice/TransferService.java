@@ -1,6 +1,11 @@
-package com.example.CWMS.transfer.service;
+package com.example.CWMS.iservice;
 
-import com.example.CWMS.transfer.dto.*;
+import com.example.CWMS.dto.TransferDashboardDTO;
+import com.example.CWMS.dto.TransferRequestDTO;
+import com.example.CWMS.dto.TransferResponseDTO;
+import com.example.CWMS.erp.dto.ErpArticleDTO;
+import com.example.CWMS.erp.dto.ErpLocationDTO;
+import com.example.CWMS.erp.dto.ErpStockDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -78,5 +83,5 @@ public interface TransferService {
 
 
     List<ErpStockDTO> getStockByLot(String lotNumber);
-    ErpLocationDTO    getLocationInfo(String locationCode);
+    ErpLocationDTO getLocationInfo(String locationCode);
 }

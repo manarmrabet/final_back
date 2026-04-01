@@ -1,8 +1,10 @@
-package com.example.CWMS.transfer.controller;
+package com.example.CWMS.controller;
 
-import com.example.CWMS.dto.ApiResponse;
-import com.example.CWMS.transfer.dto.*;
-import com.example.CWMS.transfer.service.TransferService;
+import com.example.CWMS.dto.*;
+import com.example.CWMS.erp.dto.ErpArticleDTO;
+import com.example.CWMS.erp.dto.ErpLocationDTO;
+import com.example.CWMS.erp.dto.ErpStockDTO;
+import com.example.CWMS.iservice.TransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
