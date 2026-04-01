@@ -130,4 +130,14 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
             @Param("sourceWarehouse") String sourceWarehouse,
             @Param("destWarehouse") String destWarehouse,
             Pageable pageable);
+    @Query("""
+        SELECT t FROM StockTransfer t
+        WHERE t.createdAt < :cutoff
+          AND t.status IN :statuses
+        ORDER BY t.createdAt ASC
+        """)
+    List<StockTransfer> findOldTransfersToArchive(
+            @Param("cutoff")   LocalDateTime cutoff,
+            @Param("statuses") List<String>  statuses,
+            Pageable           pageable);
 }

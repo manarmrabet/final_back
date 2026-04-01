@@ -20,6 +20,8 @@ public class TransferResponseDTO {
     private String lotNumber;
     private String sourceLocation;
     private String destLocation;
+    private String sourceWarehouse;      // ← obligatoire
+    private String destWarehouse;
     private Integer quantity;
     private String unit;
     private String status;
@@ -41,6 +43,8 @@ public class TransferResponseDTO {
                 .lotNumber(t.getLotNumber())
                 .sourceLocation(t.getSourceLocation())
                 .destLocation(t.getDestLocation())
+                .sourceWarehouse(t.getSourceWarehouse())
+                .destWarehouse(t.getDestWarehouse())
                 .quantity(t.getQuantity())
                 .unit(t.getUnit())
                 .status(t.getStatus())

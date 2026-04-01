@@ -41,41 +41,49 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**", "/auth/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 2. STOCK ERP (Lecture / Consultation) - Accessible à tous les rôles authentifiés
+                        // 2. STOCK ERP (Lecture / Consultation)
                         .requestMatchers(HttpMethod.GET, "/api/erp/stock/**", "/web/erp/stock/**", "/api/web/erp/stock/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN", "ROLE_CONSULTATION")
 
-                        // 3. TRANSFERTS (Logic métier spécifique)
-                        // Dashboard et Validation (Actions sensibles)
-                        .requestMatchers("/api/transfers/dashboard", "/api/transfers/validate/**", "/api/transfers/cancel/**")
+                        // 3. TRANSFERTS — Dashboard et Validation (actions sensibles)
+                        .requestMatchers(
+                                "/api/transfers/dashboard",
+                                "/api/transfers/validate/**",
+                                "/api/transfers/cancel/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN")
 
                         // Création et Batch (Mobile/Flutter)
                         .requestMatchers(HttpMethod.POST, "/api/transfers/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN")
 
-                        // Consultation des transferts (Historique)
+                        // Consultation des transferts — liste, search, détail
                         .requestMatchers(HttpMethod.GET, "/api/transfers/**")
                         .authenticated()
 
-                        // 4. MOUVEMENTS DE STOCK (Entrée/Sortie/Ajustement)
+                        // 4. ARCHIVES — Export CSV (réservé aux responsables et admins)
+                        .requestMatchers(HttpMethod.GET, "/api/transfers/archives/export/csv")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN")
+
+                        // Consultation des archives — accessible à tous les rôles authentifiés
+                        .requestMatchers(HttpMethod.GET, "/api/transfers/archives/**")
+                        .authenticated()
+
+                        // 5. MOUVEMENTS DE STOCK (Entrée/Sortie/Ajustement)
                         .requestMatchers("/api/mouvements/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN")
 
-                        // 5. MENU ITEMS & AUDIT
+                        // 6. MENU ITEMS & AUDIT
                         .requestMatchers(HttpMethod.GET, "/api/menu-items/**").authenticated()
                         .requestMatchers("/api/menu-items/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/audit/archives/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/audit/**").authenticated()
 
-                        // 6. ADMINISTRATION & UTILISATEURS
+                        // 7. ADMINISTRATION & UTILISATEURS
                         .requestMatchers("/api/admin/**", "/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/user/**").hasAnyAuthority(
                                 "ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN", "ROLE_CONSULTATION")
 
-
-
-                        // 7. Sécurité par défaut
+                        // 8. Sécurité par défaut
                         .anyRequest().authenticated()
                 );
 
@@ -87,12 +95,11 @@ public class SecurityConfig {
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Configuration large pour le développement (Mobile + Web)
         config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With"));
         config.setAllowCredentials(true);
-        config.setExposedHeaders(List.of("Authorization")); // Important pour récupérer le token si besoin
+        config.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
