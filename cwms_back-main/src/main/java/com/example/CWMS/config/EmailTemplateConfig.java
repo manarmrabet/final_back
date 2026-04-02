@@ -1,6 +1,6 @@
 package com.example.CWMS.config;
 
-import com.example.CWMS.model.EmailTemplate;
+import com.example.CWMS.model.cwms.EmailTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

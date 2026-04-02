@@ -24,7 +24,7 @@ import java.util.Map;
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
-        basePackages = {"com.example.CWMS.erp.repository"},
+        basePackages = {"com.example.CWMS.repository.erp"},
         entityManagerFactoryRef = "erpEntityManagerFactory",
         transactionManagerRef   = "erpTransactionManager"
 )
@@ -57,7 +57,7 @@ public class ErpDataSourceConfig {
 
         return builder
                 .dataSource(dataSource)
-                .packages("com.example.CWMS.erp.entity")
+                .packages("com.example.CWMS.model.erp")
                 .persistenceUnit("erpPU")
                 .properties(jpaProps)
                 .build();

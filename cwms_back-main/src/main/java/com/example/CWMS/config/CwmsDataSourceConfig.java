@@ -30,8 +30,7 @@ import java.util.Map;
 @EnableTransactionManagement
 @EnableJpaRepositories(
         basePackages = {
-                "com.example.CWMS.repository",
-                "com.example.CWMS.transfer.repository"
+                "com.example.CWMS.repository.cwms"
         },
         entityManagerFactoryRef = "cwmsEntityManagerFactory",
         transactionManagerRef   = "cwmsTransactionManager"
@@ -68,8 +67,7 @@ public class CwmsDataSourceConfig {
         return builder
                 .dataSource(dataSource)
                 .packages(
-                        "com.example.CWMS.model",
-                        "com.example.CWMS.transfer.model"
+                        "com.example.CWMS.model.cwms"
                 )
                 .persistenceUnit("cwmsPU")
                 .properties(jpaProps)

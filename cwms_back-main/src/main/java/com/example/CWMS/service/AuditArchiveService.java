@@ -1,14 +1,13 @@
 package com.example.CWMS.service;
 
-import com.example.CWMS.model.AuditLog;
-import com.example.CWMS.repository.AuditLogRepository;
+import com.example.CWMS.model.cwms.AuditLog;
+import com.example.CWMS.repository.cwms.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.nio.file.Files;

@@ -2,7 +2,7 @@ package com.example.CWMS.iservice;
 
 import com.example.CWMS.dto.RoleDTO;
 import com.example.CWMS.dto.RoleMenuRequest;
-import com.example.CWMS.model.Role;
+import com.example.CWMS.model.cwms.Role;
 
 import java.util.List;
 

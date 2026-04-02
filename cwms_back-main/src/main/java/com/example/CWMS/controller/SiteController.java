@@ -1,7 +1,7 @@
 package com.example.CWMS.controller;
 
 import com.example.CWMS.dto.ApiResponse; // Vérifiez le package de votre ApiResponse
-import com.example.CWMS.model.Site;
+import com.example.CWMS.model.cwms.Site;
 import com.example.CWMS.iservice.SiteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

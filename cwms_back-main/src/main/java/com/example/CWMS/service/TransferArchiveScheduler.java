@@ -1,19 +1,21 @@
 package com.example.CWMS.service;
 
-import com.example.CWMS.model.StockTransfer;
-import com.example.CWMS.model.StockTransferArchive;
-import com.example.CWMS.repository.StockTransferArchiveRepository;
-import com.example.CWMS.repository.StockTransferRepository;
+import com.example.CWMS.model.cwms.StockTransfer;
+import com.example.CWMS.repository.cwms.StockTransferRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,101 +24,133 @@ import java.util.stream.Collectors;
 @Slf4j
 public class TransferArchiveScheduler {
 
-    private static final int RETENTION_DAYS = 0;   // 0 = tout archiver (idéal pour test)
-    private static final int BATCH_SIZE = 500;
+    private static final int    BATCH_SIZE   = 500;
+    private static final String ARCHIVE_DIR  = "archives/transfers/";
 
-    private static final List<String> ARCHIVABLE_STATUSES = List.of("DONE", "CANCELLED", "ERROR");
+    private static final List<String> ARCHIVABLE_STATUSES =
+            List.of("DONE", "CANCELLED", "ERROR");
 
     private final StockTransferRepository transferRepo;
-    private final StockTransferArchiveRepository archiveRepo;
-    private final TransactionTemplate txTemplate;
+    private final TransactionTemplate     txTemplate;
 
     /**
-     * Exécute l'archivage AUTOMATIQUEMENT dès le démarrage de l'application
+     * Archivage automatique : 1er jour de chaque mois à 02h00.
+     * - Exporte TOUS les transferts terminés du mois précédent dans un CSV.
+     * - Supprime ces lignes de la table stock_transfers.
      */
-    @EventListener(ApplicationReadyEvent.class)
-    public void runArchiveOnStartup() {
-        log.info("=== ARCHIVAGE FORCÉ AU DÉMARRAGE ===");
-        log.info("Rétention configurée : {} jours (0 = tout archiver)", RETENTION_DAYS);
-        archiveOldTransfers();
-    }
+    @Scheduled(cron = "${cwms.archive.cron:0 0 2 1 * *}")
+    public void archiveMonthlyTransfers() {
 
-    /**
-     * Scheduler normal (la nuit)
-     */
-    @Scheduled(cron = "${cwms.archive.cron:0 0 2 * * *}")
-    public void archiveOldTransfers() {
+        // Période : le mois précédent complet
+        LocalDate firstDayOfLastMonth = LocalDate.now().minusMonths(1).withDayOfMonth(1);
+        LocalDateTime from = firstDayOfLastMonth.atStartOfDay();
+        LocalDateTime to   = firstDayOfLastMonth.plusMonths(1).atStartOfDay().minusNanos(1);
 
-        LocalDateTime cutoff = LocalDateTime.now().minusDays(RETENTION_DAYS);
+        String monthLabel = firstDayOfLastMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        log.info("▶ Archivage mensuel démarré — période : {}", monthLabel);
+
         long totalArchived = 0;
-        int batchNumber = 0;
+        int  batchNumber   = 0;
 
-        log.info("▶ Archivage démarré — cutoff={} (rétention {} jours)", cutoff, RETENTION_DAYS);
+        // Nom du fichier CSV
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String fileName  = ARCHIVE_DIR + "transfers_" + monthLabel + "_" + timestamp + ".csv";
 
-        List<StockTransfer> batch;
+        try {
+            Files.createDirectories(Paths.get(ARCHIVE_DIR));
 
-        do {
-            batch = transferRepo.findOldTransfersToArchive(
-                    cutoff, ARCHIVABLE_STATUSES, PageRequest.of(0, BATCH_SIZE));
+            try (PrintWriter writer = new PrintWriter(new FileWriter(fileName, java.nio.charset.StandardCharsets.UTF_8))) {
 
-            if (batch.isEmpty()) {
-                log.info("Aucun transfert éligible trouvé.");
-                break;
+                // BOM UTF-8 pour Excel
+                writer.print('\uFEFF');
+
+                // En-têtes
+                writer.println(
+                        "ID;Date création;Code article;Nom article;Lot;" +
+                                "Source;Destination;Entrepôt source;Entrepôt dest;" +
+                                "Quantité;Unité;Statut;Type;Opérateur;Notes;Date complétion"
+                );
+
+                List<StockTransfer> batch;
+
+                do {
+                    final LocalDateTime fFrom = from;
+                    final LocalDateTime fTo   = to;
+
+                    batch = transferRepo.findTransfersForArchive(
+                            fFrom, fTo, ARCHIVABLE_STATUSES, PageRequest.of(0, BATCH_SIZE));
+
+                    final List<StockTransfer> monthBatch = batch;
+
+                    if (monthBatch.isEmpty()) break;
+
+                    // Écriture CSV
+                    for (StockTransfer t : monthBatch) {
+                        writer.printf("%d;%s;%s;%s;%s;%s;%s;%s;%s;%d;%s;%s;%s;%s;%s;%s%n",
+                                t.getId(),
+                                nvl(t.getCreatedAt()),
+                                nvl(t.getErpItemCode()),
+                                csvEscape(t.getErpItemLabel()),
+                                nvl(t.getLotNumber()),
+                                nvl(t.getSourceLocation()),
+                                nvl(t.getDestLocation()),
+                                nvl(t.getSourceWarehouse()),
+                                nvl(t.getDestWarehouse()),
+                                t.getQuantity() != null ? t.getQuantity() : 0,
+                                nvl(t.getUnit()),
+                                nvl(t.getStatus()),
+                                nvl(t.getTransferType()),
+                                t.getOperator() != null
+                                        ? csvEscape(t.getOperator().getFirstName() + " " + t.getOperator().getLastName())
+                                        : "",
+                                csvEscape(t.getNotes()),
+                                nvl(t.getCompletedAt())
+                        );
+                    }
+
+                    // Suppression en base dans une transaction
+                    final List<Long> ids = monthBatch.stream()
+                            .map(StockTransfer::getId)
+                            .collect(Collectors.toList());
+
+                    txTemplate.execute(status -> {
+                        transferRepo.deleteAllByIdInBatch(ids);
+                        return null;
+                    });
+
+                    batchNumber++;
+                    totalArchived += monthBatch.size();
+
+                    log.info("  Lot #{} : {} transferts archivés (total={})",
+                            batchNumber, monthBatch.size(), totalArchived);
+
+                } while (batch.size() == BATCH_SIZE);
             }
 
-            final List<StockTransfer> currentBatch = batch;
-            final List<Long> ids = currentBatch.stream()
-                    .map(StockTransfer::getId)
-                    .collect(Collectors.toList());
+            if (totalArchived == 0) {
+                // Supprimer le fichier vide
+                Files.deleteIfExists(Paths.get(fileName));
+                log.info("▶ Archivage terminé — aucun transfert éligible pour {}", monthLabel);
+            } else {
+                log.info("▶ Archivage terminé — {} transferts exportés dans : {}", totalArchived, fileName);
+            }
 
-            txTemplate.execute(status -> {
-                List<StockTransferArchive> archives = currentBatch.stream()
-                        .map(this::toArchive)
-                        .collect(Collectors.toList());
-
-                archiveRepo.saveAll(archives);
-                transferRepo.deleteAllByIdInBatch(ids);
-                return null;
-            });
-
-            batchNumber++;
-            totalArchived += currentBatch.size();
-
-            log.info("  Lot #{} : {} transferts archivés (total={})",
-                    batchNumber, currentBatch.size(), totalArchived);
-
-        } while (batch.size() == BATCH_SIZE);
-
-        if (totalArchived == 0) {
-            log.info("▶ Archivage terminé — aucun transfert éligible");
-        } else {
-            log.info("▶ Archivage terminé — {} transferts déplacés en {} lot(s)",
-                    totalArchived, batchNumber);
+        } catch (Exception e) {
+            log.error("❌ Échec de l'archivage mensuel : {}", e.getMessage(), e);
         }
     }
 
-    private StockTransferArchive toArchive(StockTransfer t) {
-        return StockTransferArchive.builder()
-                .id(t.getId())
-                .erpItemCode(t.getErpItemCode())
-                .erpItemLabel(t.getErpItemLabel())
-                .lotNumber(t.getLotNumber())
-                .sourceLocation(t.getSourceLocation())
-                .destLocation(t.getDestLocation())
-                .sourceWarehouse(t.getSourceWarehouse())
-                .destWarehouse(t.getDestWarehouse())
-                .quantity(t.getQuantity())
-                .unit(t.getUnit())
-                .status(t.getStatus())
-                .transferType(t.getTransferType())
-                .notes(t.getNotes())
-                .errorMessage(t.getErrorMessage())
-                .operator(t.getOperator())
-                .validatedBy(t.getValidatedBy())
-                .createdAt(t.getCreatedAt())
-                .completedAt(t.getCompletedAt())
-                .validatedAt(t.getValidatedAt())
-                .archivedAt(LocalDateTime.now())
-                .build();
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    private String nvl(Object o) {
+        return o == null ? "" : o.toString();
+    }
+
+    private String csvEscape(String s) {
+        if (s == null) return "";
+        if (s.contains(";") || s.contains("\"") || s.contains("\n")) {
+            return "\"" + s.replace("\"", "\"\"") + "\"";
+        }
+        return s;
     }
 }

@@ -1,12 +1,12 @@
 package com.example.CWMS.service;
 
 import com.example.CWMS.iservice.AuditService;
-import com.example.CWMS.model.AuditLog;
-import com.example.CWMS.model.AuditLog.EventType;
-import com.example.CWMS.model.AuditLog.Severity;
-import com.example.CWMS.model.User;
-import com.example.CWMS.repository.AuditLogRepository;
-import com.example.CWMS.repository.UserRepository;
+import com.example.CWMS.model.cwms.AuditLog;
+import com.example.CWMS.model.cwms.AuditLog.EventType;
+import com.example.CWMS.model.cwms.AuditLog.Severity;
+import com.example.CWMS.model.cwms.User;
+import com.example.CWMS.repository.cwms.AuditLogRepository;
+import com.example.CWMS.repository.cwms.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;

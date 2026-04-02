@@ -1,6 +1,6 @@
 package com.example.CWMS.iservice;
 
-import com.example.CWMS.model.AuditLog;
+import com.example.CWMS.model.cwms.AuditLog;
 import jakarta.servlet.http.HttpServletRequest;
 
 public interface AuditService {

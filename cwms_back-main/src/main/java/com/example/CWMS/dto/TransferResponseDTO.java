@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 package com.example.CWMS.dto;
 
-import com.example.CWMS.model.StockTransfer;
+import com.example.CWMS.model.cwms.StockTransfer;
 import lombok.*;
 
 import java.time.LocalDateTime;

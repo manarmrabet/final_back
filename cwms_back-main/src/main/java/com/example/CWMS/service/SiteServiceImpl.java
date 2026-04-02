@@ -1,8 +1,8 @@
 package com.example.CWMS.service;
 
 import com.example.CWMS.iservice.SiteService;
-import com.example.CWMS.model.Site;
-import com.example.CWMS.repository.SiteRepository;
+import com.example.CWMS.model.cwms.Site;
+import com.example.CWMS.repository.cwms.SiteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

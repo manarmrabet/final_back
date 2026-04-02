@@ -1,9 +1,9 @@
 package com.example.CWMS.controller;
 
 import com.example.CWMS.dto.*;
-import com.example.CWMS.erp.dto.ErpArticleDTO;
-import com.example.CWMS.erp.dto.ErpLocationDTO;
-import com.example.CWMS.erp.dto.ErpStockDTO;
+import com.example.CWMS.dto.ErpArticleDTO;
+import com.example.CWMS.dto.ErpLocationDTO;
+import com.example.CWMS.dto.ErpStockDTO;
 import com.example.CWMS.iservice.TransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

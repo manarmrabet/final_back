@@ -1,6 +1,6 @@
 package com.example.CWMS.iservice;
 
-import com.example.CWMS.model.Site;
+import com.example.CWMS.model.cwms.Site;
 
 import java.util.List;
 

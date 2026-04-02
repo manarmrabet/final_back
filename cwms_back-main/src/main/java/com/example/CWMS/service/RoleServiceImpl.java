@@ -2,8 +2,13 @@ package com.example.CWMS.service;
 
 import com.example.CWMS.dto.*;
 import com.example.CWMS.iservice.RoleService;
-import com.example.CWMS.model.*;
-import com.example.CWMS.repository.*;
+import com.example.CWMS.model.cwms.MenuItem;
+import com.example.CWMS.model.cwms.Role;
+import com.example.CWMS.model.cwms.RoleMenuMapping;
+import com.example.CWMS.repository.cwms.MenuItemRepository;
+import com.example.CWMS.repository.cwms.RoleMenuMappingRepository;
+import com.example.CWMS.repository.cwms.RoleRepository;
+import com.example.CWMS.repository.cwms.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

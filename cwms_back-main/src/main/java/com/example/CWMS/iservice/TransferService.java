@@ -3,9 +3,9 @@ package com.example.CWMS.iservice;
 import com.example.CWMS.dto.TransferDashboardDTO;
 import com.example.CWMS.dto.TransferRequestDTO;
 import com.example.CWMS.dto.TransferResponseDTO;
-import com.example.CWMS.erp.dto.ErpArticleDTO;
-import com.example.CWMS.erp.dto.ErpLocationDTO;
-import com.example.CWMS.erp.dto.ErpStockDTO;
+import com.example.CWMS.dto.ErpArticleDTO;
+import com.example.CWMS.dto.ErpLocationDTO;
+import com.example.CWMS.dto.ErpStockDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

@@ -1,11 +1,10 @@
 package com.example.CWMS.service;
 
-import com.example.CWMS.config.EmailTemplateConfig;
 import com.example.CWMS.exception.EmailValidationException;
 import com.example.CWMS.iservice.EmailService;
-import com.example.CWMS.model.EmailTemplate;
-import com.example.CWMS.model.User;
-import com.example.CWMS.repository.UserRepository;
+import com.example.CWMS.model.cwms.EmailTemplate;
+import com.example.CWMS.model.cwms.User;
+import com.example.CWMS.repository.cwms.UserRepository;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

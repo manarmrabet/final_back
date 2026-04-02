@@ -2,11 +2,11 @@ package com.example.CWMS.controller;
 
 import com.example.CWMS.dto.ApiResponse;
 import com.example.CWMS.dto.AuditLogDTO;
-import com.example.CWMS.model.AuditLog.EventType;
-import com.example.CWMS.model.AuditLog.Severity;
-import com.example.CWMS.model.User;
-import com.example.CWMS.repository.AuditLogRepository;
-import com.example.CWMS.repository.UserRepository;
+import com.example.CWMS.model.cwms.AuditLog.EventType;
+import com.example.CWMS.model.cwms.AuditLog.Severity;
+import com.example.CWMS.model.cwms.User;
+import com.example.CWMS.repository.cwms.AuditLogRepository;
+import com.example.CWMS.repository.cwms.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 // ✅ ON UTILISE LE RESOURCE DE SPRING, PAS CELUI DE JAKARTA

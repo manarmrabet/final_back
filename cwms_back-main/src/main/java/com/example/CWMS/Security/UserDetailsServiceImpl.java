@@ -1,7 +1,7 @@
 package com.example.CWMS.Security;
 
-import com.example.CWMS.model.User;
-import com.example.CWMS.repository.UserRepository;
+import com.example.CWMS.model.cwms.User;
+import com.example.CWMS.repository.cwms.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
