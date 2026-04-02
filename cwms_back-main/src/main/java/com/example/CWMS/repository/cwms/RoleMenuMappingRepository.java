@@ -10,15 +10,12 @@ import java.util.List;
 @Repository
 public interface  RoleMenuMappingRepository extends JpaRepository<RoleMenuMapping, Integer> {
 
-    @Query("SELECT rmm FROM RoleMenuMapping rmm WHERE rmm.role.roleId = :roleId")
-    List<RoleMenuMapping> findByRoleId(Integer roleId);
-
+//récupère que les identifiants (IDs) des menus
     @Query("SELECT rmm.menuItem.menuItemId FROM RoleMenuMapping rmm WHERE rmm.role.roleId = :roleId")
     List<Integer> findMenuItemIdsByRoleId(Integer roleId);
-
+//Elle supprime toutes les entrées de la table de mapping pour un rôle spécifique ,lorsqu'un role est deleted on supprime toutes les anciennes associations avant les nouvelles
     @Modifying
     @Query("DELETE FROM RoleMenuMapping rmm WHERE rmm.role.roleId = :roleId")
     void deleteByRoleId(Integer roleId);
 
-    boolean existsByRole_RoleIdAndMenuItem_MenuItemId(Integer roleId, Integer menuItemId);
 }

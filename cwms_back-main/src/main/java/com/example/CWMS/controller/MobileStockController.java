@@ -1,6 +1,7 @@
 package com.example.CWMS.controller;
 
-import com.example.CWMS.service.MobileStockService; // Import correct du nouveau service
+import com.example.CWMS.iservice.MobileStockService;
+import com.example.CWMS.service.MobileStockServiceImpl; // Import correct du nouveau service
 import com.example.CWMS.dto.ErpLotLineDTO;
 import com.example.CWMS.dto.ErpStockDTO;
 import lombok.RequiredArgsConstructor;

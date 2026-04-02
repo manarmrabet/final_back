@@ -1,5 +1,6 @@
 package com.example.CWMS.service;
 
+import com.example.CWMS.iservice.MobileStockService;
 import com.example.CWMS.model.erp.ErpArticle;
 import com.example.CWMS.model.erp.ErpStock;
 import com.example.CWMS.repository.erp.ErpArticleRepository;
@@ -15,11 +16,13 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class MobileStockService {
+public class MobileStockServiceImpl implements MobileStockService {
 
     private final ErpStockRepository stockRepository;
     private final ErpArticleRepository articleRepository;
+//récupére les infos de l'article en plus de qté
 
+    @Override
     public ErpArticleSummaryDTO getArticleSummary(String code) {
         ErpArticle article = articleRepository.findByItemCode(code.trim())
                 .orElseThrow(() -> new RuntimeException("Article non trouvé"));
@@ -39,14 +42,17 @@ public class MobileStockService {
                 .build();
     }
 
-    // --- NOUVELLE MÉTHODE : getLotDetails (Attendue par le contrôleur ligne 42) ---
+
+    //Permet au magasinier de scanner un lot et de voir instantanément où il est rangé
+    @Override
     public List<ErpLotLineDTO> getLotDetails(String lotNumber) {
         return stockRepository.findByLotNumber(lotNumber.trim()).stream()
                 .map(this::mapToLotLine)
                 .collect(Collectors.toList());
     }
 
-    // --- NOUVELLE MÉTHODE : getLotsByItem (Attendue par le contrôleur ligne 57) ---
+    //Fournit une liste de lots simplifiée pour un article
+    @Override
     public List<ErpStockDTO> getLotsByItem(String code) {
         return stockRepository.findByItemCode(code.trim()).stream()
                 .map(s -> ErpStockDTO.builder()
@@ -58,6 +64,9 @@ public class MobileStockService {
                 .collect(Collectors.toList());
     }
 
+
+    /* il force la récupération de la désignation de l'article pour chaque ligne
+    afin que l'affichage mobile soit complet **/
     private ErpLotLineDTO mapToLotLine(ErpStock s) {
         // On récupère la désignation réelle de l'article pour que l'écran violet soit complet
         String designation = articleRepository.findByItemCode(s.getItemCode())

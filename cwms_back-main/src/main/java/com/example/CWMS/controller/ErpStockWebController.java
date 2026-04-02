@@ -1,7 +1,9 @@
 package com.example.CWMS.controller;
 
-import com.example.CWMS.service.StockDashboardService;
-import com.example.CWMS.service.ErpConsultationService;
+import com.example.CWMS.iservice.ErpConsultationService;
+import com.example.CWMS.iservice.StockDashboardService;
+import com.example.CWMS.service.StockDashboardServiceImpl;
+import com.example.CWMS.service.ErpConsultationServiceImpl;
 import com.example.CWMS.dto.ErpArticleSummaryDTO;
 import com.example.CWMS.dto.ErpLotLineDTO;
 import lombok.RequiredArgsConstructor;

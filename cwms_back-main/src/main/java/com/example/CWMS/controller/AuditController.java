@@ -38,6 +38,7 @@ public class AuditController {
     private final UserRepository     userRepository;
     private static final String ARCHIVE_DIR = "archives/audit_logs/";
 
+//Permet de filtrer par type (LOGIN, UPDATE, etc.), par sévérité ou par date
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AuditLogDTO>>> search(
             @RequestParam(required = false) String    eventType,
@@ -60,6 +61,7 @@ public class AuditController {
         ));
     }
 
+//Affiche l'historique complet d'un employé spécifique
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse<Page<AuditLogDTO>>> getByUser(
             @PathVariable Integer userId, Pageable pageable) {
@@ -72,6 +74,7 @@ public class AuditController {
         ));
     }
 
+    //Affiche uniquement les entrées/sorties (le "pointage" numérique) d'un utilisateur
     @GetMapping("/user/{userId}/connections")
     public ResponseEntity<ApiResponse<List<AuditLogDTO>>> getConnections(
             @PathVariable Integer userId) {
@@ -84,6 +87,8 @@ public class AuditController {
         ));
     }
 
+
+    //Liste les fichiers CSV disponibles sur le serveur
     @GetMapping("/archives")
     public ResponseEntity<ApiResponse<List<String>>> listArchives() {
         File folder = new File(ARCHIVE_DIR);
@@ -97,6 +102,8 @@ public class AuditController {
         return ResponseEntity.ok(ApiResponse.success(files));
     }
 
+
+    //Permet à l'administrateur de télécharger un ancien log pour une consultation hors-ligne
     @GetMapping("/archives/download/{filename}")
     public ResponseEntity<Resource> downloadArchive(@PathVariable String filename) {
         try {

@@ -1,10 +1,10 @@
 package com.example.CWMS.service;
 
+import com.example.CWMS.iservice.StockDashboardService;
 import com.example.CWMS.model.erp.ErpArticle;
 import com.example.CWMS.model.erp.ErpStock;
 import com.example.CWMS.repository.erp.ErpArticleRepository;
 import com.example.CWMS.repository.erp.ErpStockRepository;
-import com.example.CWMS.dto.ErpArticleSummaryDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,12 +16,15 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StockDashboardService {
+public class StockDashboardServiceImpl implements StockDashboardService {
 
     private final ErpStockRepository stockRepository;
     private final ErpArticleRepository articleRepository;
-    private final ErpConsultationService consultationService;
+    private final ErpConsultationServiceImpl consultationService;
 
+
+  //calcule les statistiques par entrepôt, par catégorie et le Top 10 des articles/emplacements
+    @Override
     @Transactional(transactionManager = "erpTransactionManager", readOnly = true)
     public Map<String, Object> getDashboardData() {
         try {
@@ -123,6 +126,8 @@ public class StockDashboardService {
         }
     }
 
+
+    //Elle évite que  l'application plante si la base de données ERP est vide
     private Map<String, Object> createEmptyResponse() {
         Map<String, Object> empty = new HashMap<>();
         empty.put("byWarehouse", new ArrayList<>());
@@ -133,16 +138,5 @@ public class StockDashboardService {
         return empty;
     }
 
-    @Transactional(transactionManager = "erpTransactionManager", readOnly = true)
-    public List<ErpArticleSummaryDTO> searchArticles(String query) {
-        if (query == null || query.trim().isEmpty()) return new ArrayList<>();
-        return articleRepository.search(query.trim()).stream()
-                .limit(20)
-                .map(article -> {
-                    try { return consultationService.getArticleSummary(article.getItemCode().trim()); }
-                    catch (Exception e) { return null; }
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-    }
+
 }

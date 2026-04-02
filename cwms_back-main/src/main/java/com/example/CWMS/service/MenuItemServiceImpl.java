@@ -48,20 +48,26 @@ public class MenuItemServiceImpl implements MenuItemService {
     @Transactional
     @Auditable(action = "MENU_CREATED", entityType = "MenuItem")
     public MenuItemDTO createMenuItem(MenuItemDTO request) {
-        // Résoudre le parent depuis la BDD si un parentId est fourni
+
+        // ✅ MODIFICATION : Résoudre le parent depuis la BDD si un parentId est fourni
         MenuItem parent = null;
         if (request.getParentId() != null) {
             parent = menuItemRepository.findById(request.getParentId())
                     .orElseThrow(() -> new RuntimeException("Parent not found: " + request.getParentId()));
         }
 
+        // ✅ MODIFICATION : isTitle et isLayout sont calculés automatiquement
+        // - Si pas de parent → menu principal → isTitle=true, isLayout=true
+        // - Si parent présent → sous-menu enfant → isTitle=false, isLayout=false
+        boolean isParent = (parent == null);
+
         MenuItem item = MenuItem.builder()
                 .label(request.getLabel())
                 .icon(request.getIcon())
                 .link(request.getLink())
                 .parent(parent)
-                .isTitle(request.getIsTitle() != null ? request.getIsTitle() : false)
-                .isLayout(request.getIsLayout() != null ? request.getIsLayout() : false)
+                .isTitle(isParent)   // ✅ true si parent, false si enfant
+                .isLayout(isParent)  // ✅ true si parent, false si enfant
                 .build();
 
         return toDTO(menuItemRepository.save(item));
@@ -78,13 +84,20 @@ public class MenuItemServiceImpl implements MenuItemService {
         if (request.getIcon() != null) item.setIcon(request.getIcon());
         if (request.getLink() != null) item.setLink(request.getLink());
 
-        // Résoudre le parent depuis la BDD
+        // ✅ MODIFICATION : Recalcul automatique de isTitle et isLayout
+        // selon la présence ou non d'un parentId dans la requête
         if (request.getParentId() != null) {
             MenuItem parent = menuItemRepository.findById(request.getParentId())
                     .orElseThrow(() -> new RuntimeException("Parent not found: " + request.getParentId()));
             item.setParent(parent);
+            // ✅ Enfant → isTitle=false, isLayout=false
+            item.setIsTitle(false);
+            item.setIsLayout(false);
         } else {
-            item.setParent(null); // Reset vers menu principal
+            // ✅ Pas de parent → menu principal → isTitle=true, isLayout=true
+            item.setParent(null);
+            item.setIsTitle(true);
+            item.setIsLayout(true);
         }
 
         return toDTO(menuItemRepository.save(item));

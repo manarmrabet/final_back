@@ -16,17 +16,17 @@ import java.util.Optional;
 public interface ErpStockRepository extends JpaRepository<ErpStock, Long> {
 
     // ─── PAGINATION ───────────────────────────────────────────────────────────
-
+//Récupère tout le stock avec pagination (trié par ID décroissant)
     @Query("SELECT s FROM ErpStock s ORDER BY s.idStockage DESC")
     Page<ErpStock> findAll(Pageable pageable);
-
-    // ─── PAR LOT ──────────────────────────────────────────────────────────────
+//Cherche toutes les lignes d'un lot spécifique (en ignorant les espaces avec TRIM)
+    // ─── PAR LOT ─────────────────────────────────────────────────────────────
 
     @Query("SELECT s FROM ErpStock s WHERE TRIM(s.lotNumber) = TRIM(:lotNumber)")
     List<ErpStock> findByLotNumber(@Param("lotNumber") String lotNumber);
 
     // ─── PAR ARTICLE ──────────────────────────────────────────────────────────
-
+//Liste tout le stock d'un article, trié par emplacement
     @Query("""
         SELECT s FROM ErpStock s
         WHERE TRIM(s.itemCode) = TRIM(:itemCode)
@@ -39,8 +39,6 @@ public interface ErpStockRepository extends JpaRepository<ErpStock, Long> {
     @Query("SELECT s FROM ErpStock s WHERE TRIM(s.location) = TRIM(:location)")
     List<ErpStock> findByLocation(@Param("location") String location);
 
-    @Query("SELECT DISTINCT TRIM(s.itemCode) FROM ErpStock s WHERE TRIM(s.location) = TRIM(:location)")
-    List<String> findDistinctItemCodesByLocation(@Param("location") String location);
 
     // ─── COMBINÉES ────────────────────────────────────────────────────────────
 
@@ -74,14 +72,7 @@ public interface ErpStockRepository extends JpaRepository<ErpStock, Long> {
             @Param("itemCode") String itemCode,
             @Param("location") String location);
 
-    // ─── STATISTIQUES ─────────────────────────────────────────────────────────
 
-    @Query("SELECT TRIM(s.itemCode), TRIM(s.location), " +
-            "SUM(CAST(COALESCE(NULLIF(TRIM(s.quantityAvailableRaw),''), '0') AS double)) " +
-            "FROM ErpStock s " +
-            "WHERE TRIM(s.itemCode) = TRIM(:itemCode) " +
-            "GROUP BY s.itemCode, s.location")
-    List<Object[]> findStockSummaryByItem(@Param("itemCode") String itemCode);
 
     // ═════════════════════════════════════════════════════════════════════════
     // TRANSFERT ERP — utilisé par ErpStockUpdater

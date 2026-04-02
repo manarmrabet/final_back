@@ -32,7 +32,8 @@ public class AuditServiceImpl implements AuditService {
     private final ObjectMapper       objectMapper;
 
     // ── CONNEXIONS ────────────────────────────────────────────
-
+//loglogin et loglogout enregistre les accès au système.
+// Capture l'IP, l'User-Agent et si la tentative a réussi
     @Override
     public void logLogin(String username, String ip, String userAgent,
                          boolean success, String sessionId) {

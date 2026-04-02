@@ -18,15 +18,13 @@ import java.util.List;
 
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
-
-    // ✅ OK : Les méthodes de nommage automatique gèrent très bien le Pageable
+//Récupère tous les logs pour un objet User spécifique avec pagination.
+    //   Les méthodes de nommage automatique gèrent très bien le Pageable
     Page<AuditLog> findByUser(User user, Pageable pageable);
 
-    // ✅ CORRIGÉ : Suppression du ORDER BY (conflit avec Pageable sur SQL Server)
-    @Query("SELECT a FROM AuditLog a WHERE a.user.userId = :userId")
-    Page<AuditLog> findByUserId(@Param("userId") Integer userId, Pageable pageable);
 
-    // ✅ OK : Ici on peut garder le ORDER BY car on retourne une List (pas de Pageable)
+
+    // Filtre spécifiquement les événements de type LOGIN, LOGOUT ou LOGIN_FAILED
     @Query("""
         SELECT a FROM AuditLog a
         WHERE a.user.userId = :userId
@@ -35,13 +33,15 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
         """)
     List<AuditLog> findConnectionsByUserId(@Param("userId") Integer userId);
 
-    // ✅ OK : Requête de comptage simple
+    //  OK : Requête de comptage simple
 
 
 
     ;
 
-    // ✅ CORRIGÉ : Suppression du ORDER BY final
+    //  gère des filtres optionnels
+    //  (si un paramètre est NULL, il est ignoré)
+    //  sur le type, la sévérité, l'utilisateur et les dates.
     @Query("""
         SELECT a FROM AuditLog a
         WHERE (:eventType IS NULL OR a.eventType  = :eventType)
@@ -58,15 +58,16 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
             @Param("to")        LocalDateTime to,
             Pageable pageable
     );
-    // ✅ Pour delete forcé : supprime tous les logs d'un user
+    // Supprime physiquement tous les logs d'un utilisateur (utilisé pour les suppressions forcées)
     @Modifying
     @Query("DELETE FROM AuditLog a WHERE a.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Integer userId);
 //archivage
+    //Sélectionne les logs créés avant une date donnée pour préparation à l'archivage
 
     @Query("SELECT a FROM AuditLog a WHERE a.createdAt < :cutoffDate")
     List<AuditLog> findOldLogs(@Param("cutoffDate") LocalDateTime cutoffDate);
-
+//Supprime les logs plus vieux qu'une date de coupure (après archivage).
     @Modifying
     @Transactional
     @Query("DELETE FROM AuditLog a WHERE a.createdAt < :cutoffDate")
