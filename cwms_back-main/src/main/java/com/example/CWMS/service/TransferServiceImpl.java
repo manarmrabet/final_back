@@ -61,12 +61,17 @@ public class TransferServiceImpl implements TransferService {
                 request.getErpItemCode(), request.getLotNumber(),
                 request.getSourceLocation(), request.getDestLocation());
 
-        validateTransferRequest(request);
-
+        // ✅ CORRECTION 1 : article chargé UNE SEULE FOIS ici
+        // puis passé en paramètre à validateTransferRequest()
+        // → supprime la 2ème requête ERP qui était dans validateTransferRequest()
         ErpArticle article = erpArticleRepo.findByItemCode(request.getErpItemCode())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Article introuvable dans l'ERP : " + request.getErpItemCode()));
 
+        validateTransferRequest(request, article);
+
+        // ✅ CORRECTION 2 : getCurrentUser() appelé UNE SEULE FOIS
+        // et stocké dans une variable locale — pas de nouvelle requête SQL
         User operator = getCurrentUser();
 
         String sourceWarehouse = extractWarehouse(request.getSourceLocation());
@@ -82,9 +87,10 @@ public class TransferServiceImpl implements TransferService {
                 .destWarehouse(destWarehouse)
                 .quantity(request.getQuantity())
                 .unit(article.getStockUnit())
+                // ✅ CORRECTION 3 : enum typé au lieu de String
                 .status(StockTransfer.TransferStatus.DONE)
                 .transferType(request.getTransferType() != null
-                        ? request.getTransferType()
+                        ? StockTransfer.TransferType.valueOf(request.getTransferType())
                         : StockTransfer.TransferType.INTERNAL_RELOCATION)
                 .operator(operator)
                 .notes(request.getNotes())
@@ -94,18 +100,15 @@ public class TransferServiceImpl implements TransferService {
         StockTransfer saved = transferRepo.save(transfer);
         log.info("Transfert #{} enregistré dans CWMSDB", saved.getId());
 
-        // ── Mise à jour ERP dans sa propre transaction ────────────────────
-        // Si l'ERP échoue, le transfert CWMS reste valide (déjà commité).
-        // L'opérateur verra un warning dans les logs mais son transfert
-        // est tracé et peut être re-synchronisé manuellement si besoin.
+        // ── Mise à jour ERP (non bloquante) ──────────────────────────────
         try {
             boolean erpOk = erpStockUpdater.moveLot(request);
             if (!erpOk) {
-                log.warn("⚠️  Transfert #{} : lot non trouvé dans l'ERP au moment " +
-                        "du déplacement (peut être déjà à la destination)", saved.getId());
+                log.warn("Transfert #{} : lot non trouvé dans l'ERP au moment du déplacement",
+                        saved.getId());
             }
         } catch (Exception e) {
-            log.error("❌ Transfert #{} : erreur ERP non bloquante → {}",
+            log.error("Transfert #{} : erreur ERP non bloquante → {}",
                     saved.getId(), e.getMessage(), e);
         }
 
@@ -119,11 +122,16 @@ public class TransferServiceImpl implements TransferService {
     @Override
     public List<TransferResponseDTO> createTransferBatch(List<TransferRequestDTO> requests) {
         log.info("Batch transfert : {} lignes", requests.size());
+
+        // ✅ CORRECTION 2 (batch) : getCurrentUser() appelé UNE SEULE FOIS
+        // pour tout le batch — évite N requêtes SQL inutiles
+        User operator = getCurrentUser();
+
         List<TransferResponseDTO> results = new ArrayList<>();
 
         for (TransferRequestDTO request : requests) {
             try {
-                results.add(createTransfer(request));
+                results.add(createTransferWithUser(request, operator));
             } catch (Exception e) {
                 log.error("Erreur batch article={} lot={} : {}",
                         request.getErpItemCode(), request.getLotNumber(), e.getMessage());
@@ -133,7 +141,7 @@ public class TransferServiceImpl implements TransferService {
                         .sourceLocation(request.getSourceLocation())
                         .destLocation(request.getDestLocation())
                         .quantity(request.getQuantity())
-                        .status(StockTransfer.TransferStatus.ERROR)
+                        .status(StockTransfer.TransferStatus.ERROR.name())
                         .errorMessage(e.getMessage())
                         .createdAt(LocalDateTime.now())
                         .build());
@@ -141,9 +149,52 @@ public class TransferServiceImpl implements TransferService {
         }
 
         long success = results.stream()
-                .filter(r -> StockTransfer.TransferStatus.DONE.equals(r.getStatus())).count();
+                .filter(r -> StockTransfer.TransferStatus.DONE.name().equals(r.getStatus()))
+                .count();
         log.info("Batch terminé : {}/{} succès", success, requests.size());
         return results;
+    }
+
+    /**
+     * Version interne de createTransfer qui accepte un User déjà chargé.
+     * Utilisée par le batch pour éviter une requête SQL par ligne.
+     */
+    @Transactional
+    private TransferResponseDTO createTransferWithUser(TransferRequestDTO request, User operator) {
+        ErpArticle article = erpArticleRepo.findByItemCode(request.getErpItemCode())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Article introuvable dans l'ERP : " + request.getErpItemCode()));
+
+        validateTransferRequest(request, article);
+
+        StockTransfer transfer = StockTransfer.builder()
+                .erpItemCode(request.getErpItemCode())
+                .erpItemLabel(article.getDesignation())
+                .lotNumber(request.getLotNumber())
+                .sourceLocation(request.getSourceLocation())
+                .destLocation(request.getDestLocation())
+                .sourceWarehouse(extractWarehouse(request.getSourceLocation()))
+                .destWarehouse(extractWarehouse(request.getDestLocation()))
+                .quantity(request.getQuantity())
+                .unit(article.getStockUnit())
+                .status(StockTransfer.TransferStatus.DONE)
+                .transferType(request.getTransferType() != null
+                        ? StockTransfer.TransferType.valueOf(request.getTransferType())
+                        : StockTransfer.TransferType.INTERNAL_RELOCATION)
+                .operator(operator)
+                .notes(request.getNotes())
+                .completedAt(LocalDateTime.now())
+                .build();
+
+        StockTransfer saved = transferRepo.save(transfer);
+
+        try {
+            erpStockUpdater.moveLot(request);
+        } catch (Exception e) {
+            log.error("Batch transfert #{} : erreur ERP → {}", saved.getId(), e.getMessage());
+        }
+
+        return TransferResponseDTO.from(saved);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -159,8 +210,10 @@ public class TransferServiceImpl implements TransferService {
             throw new IllegalStateException(
                     "Seul un PENDING peut être validé. Statut : " + t.getStatus());
         }
+        // ✅ getCurrentUser() appelé une fois, résultat réutilisé
+        User validator = getCurrentUser();
         t.setStatus(StockTransfer.TransferStatus.DONE);
-        t.setValidatedBy(getCurrentUser());
+        t.setValidatedBy(validator);
         t.setValidatedAt(LocalDateTime.now());
         t.setCompletedAt(LocalDateTime.now());
         return TransferResponseDTO.from(transferRepo.save(t));
@@ -174,9 +227,10 @@ public class TransferServiceImpl implements TransferService {
         if (StockTransfer.TransferStatus.DONE.equals(t.getStatus())) {
             throw new IllegalStateException("Impossible d'annuler un DONE");
         }
+        User validator = getCurrentUser();
         t.setStatus(StockTransfer.TransferStatus.CANCELLED);
         t.setErrorMessage(reason);
-        t.setValidatedBy(getCurrentUser());
+        t.setValidatedBy(validator);
         t.setValidatedAt(LocalDateTime.now());
         return TransferResponseDTO.from(transferRepo.save(t));
     }
@@ -208,27 +262,24 @@ public class TransferServiceImpl implements TransferService {
         log.debug("search() → status={} itemCode={} location={} from={} to={} page={}",
                 s, i, l, from, to, pageable.getPageNumber());
 
-        Page<TransferResponseDTO> result = transferRepo
-                .search(s, i, l, from, to, pageable)
+        return transferRepo.search(s, i, l, from, to, pageable)
                 .map(TransferResponseDTO::from);
-
-        log.debug("search() → {} résultats (total={})",
-                result.getNumberOfElements(), result.getTotalElements());
-
-        return result;
     }
 
+    /**
+     * ✅ CORRECTION : vraie pagination — le controller contrôle page et size.
+     * Plus de PageRequest(0, 50) caché dans le service.
+     */
     @Override
-    public List<TransferResponseDTO> getMyTransfers(Integer operatorId) {
+    @Transactional(readOnly = true)
+    public Page<TransferResponseDTO> getMyTransfers(Integer operatorId, Pageable pageable) {
         return transferRepo
-                .findByOperator_UserIdOrderByCreatedAtDesc(operatorId, PageRequest.of(0, 50))
-                .stream()
-                .map(TransferResponseDTO::from)
-                .collect(Collectors.toList());
+                .findByOperator_UserIdOrderByCreatedAtDesc(operatorId, pageable)
+                .map(TransferResponseDTO::from);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // ERP — STOCK PAR LOT + EMPLACEMENT
+    // ERP — STOCK PAR LOT
     // ═════════════════════════════════════════════════════════════════════════
 
     @Override
@@ -238,13 +289,29 @@ public class TransferServiceImpl implements TransferService {
         if (stocks.isEmpty()) {
             throw new NoSuchElementException("Lot introuvable dans l'ERP : " + lotNumber);
         }
+
+        // ✅ CORRECTION : 1 seule requête SQL pour tous les labels
+        // Avant : 1 requête findByItemCode() par ligne de stock (N requêtes)
+        // Après : 1 requête findAllByItemCodeIn() pour tous les codes
+        Set<String> codes = stocks.stream()
+                .map(s -> s.getItemCode().trim())
+                .collect(Collectors.toSet());
+
+        Map<String, String> labelsByCode = erpArticleRepo.findAllByItemCodeIn(codes)
+                .stream()
+                .collect(Collectors.toMap(
+                        a -> a.getItemCode().trim(),
+                        ErpArticle::getDesignation
+                ));
+
         return stocks.stream().map(s -> {
-            String label = erpArticleRepo.findByItemCode(s.getItemCode().trim())
-                    .map(ErpArticle::getDesignation)
-                    .orElse(s.getItemCode().trim());
+            String code  = s.getItemCode() != null ? s.getItemCode().trim() : null;
+            String label = code != null
+                    ? labelsByCode.getOrDefault(code, code)
+                    : null;
             return ErpStockDTO.builder()
                     .id(s.getIdStockage())
-                    .itemCode(s.getItemCode() != null ? s.getItemCode().trim() : null)
+                    .itemCode(code)
                     .itemLabel(label)
                     .location(s.getLocation())
                     .lotNumber(s.getLotNumber())
@@ -256,6 +323,10 @@ public class TransferServiceImpl implements TransferService {
                     .build();
         }).collect(Collectors.toList());
     }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // ERP — EMPLACEMENT
+    // ═════════════════════════════════════════════════════════════════════════
 
     @Override
     @Transactional(transactionManager = "erpTransactionManager", readOnly = true)
@@ -283,8 +354,7 @@ public class TransferServiceImpl implements TransferService {
     public ErpArticleDTO getArticleByCode(String itemCode) {
         return erpArticleRepo.findByItemCode(itemCode)
                 .map(ErpArticleDTO::from)
-                .orElseThrow(() -> new NoSuchElementException(
-                        "Article introuvable : " + itemCode));
+                .orElseThrow(() -> new NoSuchElementException("Article introuvable : " + itemCode));
     }
 
     @Override
@@ -320,7 +390,7 @@ public class TransferServiceImpl implements TransferService {
     public TransferDashboardDTO getDashboard() {
         Map<String, Long> countByStatus = new HashMap<>();
         transferRepo.countByStatusGrouped()
-                .forEach(row -> countByStatus.put((String) row[0], (Long) row[1]));
+                .forEach(row -> countByStatus.put(row[0].toString(), (Long) row[1]));
 
         LocalDateTime today    = LocalDateTime.now().toLocalDate().atStartOfDay();
         LocalDateTime weekAgo  = LocalDateTime.now().minusDays(7);
@@ -366,7 +436,11 @@ public class TransferServiceImpl implements TransferService {
     // HELPERS PRIVÉS
     // ═════════════════════════════════════════════════════════════════════════
 
-    private void validateTransferRequest(TransferRequestDTO req) {
+    /**
+     * ✅ CORRECTION : article déjà chargé passé en paramètre
+     * → supprime la requête ERP qui était dans cette méthode
+     */
+    private void validateTransferRequest(TransferRequestDTO req, ErpArticle article) {
         if (req.getSourceLocation().equalsIgnoreCase(req.getDestLocation())) {
             throw new IllegalArgumentException("Source et destination identiques");
         }
@@ -406,8 +480,7 @@ public class TransferServiceImpl implements TransferService {
 
     private StockTransfer getTransferOrThrow(Long id) {
         return transferRepo.findById(id)
-                .orElseThrow(() -> new NoSuchElementException(
-                        "Transfert introuvable : " + id));
+                .orElseThrow(() -> new NoSuchElementException("Transfert introuvable : " + id));
     }
 
     private User getCurrentUser() {

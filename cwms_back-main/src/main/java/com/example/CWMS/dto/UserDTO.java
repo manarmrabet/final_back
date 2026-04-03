@@ -13,7 +13,6 @@ public class UserDTO {
     private Integer       id;
     private String        userName;
     private String        email;
-    private String        passwordHash;
     private String        firstName;
     private String        lastName;
     private Integer       isActive;

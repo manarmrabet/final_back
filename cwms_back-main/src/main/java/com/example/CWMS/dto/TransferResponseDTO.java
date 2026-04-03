@@ -1,6 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// FILE 2 : TransferResponseDTO.java  (Backend → Mobile/Web)
-// ─────────────────────────────────────────────────────────────────────────────
 package com.example.CWMS.dto;
 
 import com.example.CWMS.model.cwms.StockTransfer;
@@ -20,12 +17,12 @@ public class TransferResponseDTO {
     private String lotNumber;
     private String sourceLocation;
     private String destLocation;
-    private String sourceWarehouse;      // ← obligatoire
+    private String sourceWarehouse;
     private String destWarehouse;
     private Integer quantity;
     private String unit;
-    private String status;
-    private String transferType;
+    private String status;        // String pour la sérialisation JSON
+    private String transferType;  // String pour la sérialisation JSON
     private String operatorName;
     private String validatedByName;
     private LocalDateTime createdAt;
@@ -34,7 +31,10 @@ public class TransferResponseDTO {
     private String notes;
     private String errorMessage;
 
-    /** Mapping depuis entité */
+    /**
+     * Mapping depuis entité.
+     * ✅ .name() convertit l'enum en String ("DONE", "PENDING"...)
+     */
     public static TransferResponseDTO from(StockTransfer t) {
         return TransferResponseDTO.builder()
                 .id(t.getId())
@@ -47,8 +47,9 @@ public class TransferResponseDTO {
                 .destWarehouse(t.getDestWarehouse())
                 .quantity(t.getQuantity())
                 .unit(t.getUnit())
-                .status(t.getStatus())
-                .transferType(t.getTransferType())
+                // ✅ .name() au lieu de .getStatus() directement
+                .status(t.getStatus()       != null ? t.getStatus().name()       : null)
+                .transferType(t.getTransferType() != null ? t.getTransferType().name() : null)
                 .operatorName(t.getOperator() != null
                         ? t.getOperator().getFirstName() + " " + t.getOperator().getLastName()
                         : null)

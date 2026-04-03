@@ -6,6 +6,10 @@ import java.time.LocalDateTime;
 
 /**
  * Entité CWMSDB — Table stock_transfers
+ *
+ * CORRECTION : status et transferType sont maintenant des enums Java (@Enumerated).
+ * JPA stocke le nom en String ("DONE", "PENDING"...) mais le code est typé —
+ * impossible de mettre une valeur invalide en base par erreur.
  */
 @Entity
 @Table(name = "stock_transfers")
@@ -29,14 +33,13 @@ public class StockTransfer {
     @Column(name = "lot_number", length = 50)
     private String lotNumber;
 
-    // Emplacements (comme avant)
+    // Emplacements
     @Column(name = "source_location", nullable = false, length = 50)
     private String sourceLocation;
 
     @Column(name = "dest_location", nullable = false, length = 50)
     private String destLocation;
 
-    // === NOUVELLES COLONNES ===
     @Column(name = "source_warehouse", length = 50)
     private String sourceWarehouse;
 
@@ -50,14 +53,16 @@ public class StockTransfer {
     @Column(name = "unit", length = 20)
     private String unit;
 
-    // Statut & Type
+    // ✅ CORRECTION : enums typés au lieu de String libres
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     @Builder.Default
-    private String status = TransferStatus.PENDING;
+    private TransferStatus status = TransferStatus.PENDING;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "transfer_type", length = 30)
     @Builder.Default
-    private String transferType = TransferType.INTERNAL_RELOCATION;
+    private TransferType transferType = TransferType.INTERNAL_RELOCATION;
 
     // Acteurs
     @ManyToOne(fetch = FetchType.LAZY)
@@ -85,27 +90,20 @@ public class StockTransfer {
     @Column(name = "error_message", length = 500)
     private String errorMessage;
 
-    // Lifecycle
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        if (status == null) status = TransferStatus.PENDING;
+        if (status == null)       status       = TransferStatus.PENDING;
         if (transferType == null) transferType = TransferType.INTERNAL_RELOCATION;
     }
 
-    // Constantes
-    public static final class TransferStatus {
-        public static final String PENDING   = "PENDING";
-        public static final String DONE      = "DONE";
-        public static final String ERROR     = "ERROR";
-        public static final String CANCELLED = "CANCELLED";
-        private TransferStatus() {}
+    // ─── Enums ────────────────────────────────────────────────────────────────
+
+    public enum TransferStatus {
+        PENDING, DONE, ERROR, CANCELLED
     }
 
-    public static final class TransferType {
-        public static final String PUTAWAY              = "PUTAWAY";
-        public static final String INTERNAL_RELOCATION  = "INTERNAL_RELOCATION";
-        public static final String REPLENISHMENT        = "REPLENISHMENT";
-        private TransferType() {}
+    public enum TransferType {
+        PUTAWAY, INTERNAL_RELOCATION, REPLENISHMENT
     }
 }

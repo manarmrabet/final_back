@@ -78,7 +78,6 @@ public class UserServiceImpl implements UserService {
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setFailedAttempts(0);
         user.setAccountNonLocked(true);
-        user.setCreatedAt(LocalDateTime.now());
         user.setMustChangePassword(true);       // ← ajouté
         user.setCredentialsSent(false);         // ← ajouté
 
@@ -179,17 +178,15 @@ public class UserServiceImpl implements UserService {
         }
 
         if (dto.getRoleName() != null && !dto.getRoleName().isEmpty()) {
-            roleRepository.findAll().stream()
-                    .filter(r -> r.getRoleName().equalsIgnoreCase(dto.getRoleName()))
-                    .findFirst().ifPresent(user::setRole);
+            roleRepository.findByRoleNameIgnoreCase(dto.getRoleName())
+                    .ifPresent(user::setRole);
         }
 
         if (dto.getSiteName() != null && !dto.getSiteName().isEmpty()) {
-            siteRepository.findAll().stream()
-                    .filter(s -> s.getSiteName().equalsIgnoreCase(dto.getSiteName()))
-                    .findFirst().ifPresent(user::setSite);
-        }
-    }
+            siteRepository.findBySiteNameIgnoreCase(dto.getSiteName())
+                    .ifPresent(user::setSite);
+
+        }}
 
     @Override
     public UserDTO mapToDTO(User user) {

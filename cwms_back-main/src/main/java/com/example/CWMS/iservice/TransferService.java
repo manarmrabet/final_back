@@ -17,37 +17,22 @@ import java.util.List;
  *
  * Principe métier :
  *  1. Valider l'article via ERP (existe, actif)
- *  2. Valider le stock ERP (quantité suffisante dans l'emplacement source)
- *  3. Valider les emplacements (source ≠ destination, tous les deux existent dans ERP)
- *  4. Enregistrer le transfert dans CWMSDB (stock_transfers)
- *  5. L'audit est automatique via @Auditable
+ *  2. Valider le stock ERP (lot présent à la source)
+ *  3. Valider les emplacements (source ≠ destination)
+ *  4. Enregistrer le transfert dans CWMSDB
+ *  5. Mettre à jour l'ERP (non bloquant)
+ *  6. L'audit est automatique via @Auditable
  */
 public interface TransferService {
 
     // ─── Opérations de transfert ──────────────────────────────────────────────
 
-    /**
-     * Créer un transfert interne (appelé par mobile ou web).
-     * Lance une validation métier complète avant persistance.
-     */
     TransferResponseDTO createTransfer(TransferRequestDTO request);
 
-    /**
-     * Créer plusieurs transferts en batch (mode multi-lignes Flutter).
-     * Chaque ligne est traitée indépendamment — une erreur n'arrête pas les autres.
-     */
     List<TransferResponseDTO> createTransferBatch(List<TransferRequestDTO> requests);
 
-    /**
-     * Valider un transfert PENDING (superviseur web).
-     * Passe le statut de PENDING → DONE.
-     */
     TransferResponseDTO validateTransfer(Long transferId);
 
-    /**
-     * Annuler un transfert (superviseur web).
-     * Passe le statut de PENDING → CANCELLED.
-     */
     TransferResponseDTO cancelTransfer(Long transferId, String reason);
 
     // ─── Consultation ─────────────────────────────────────────────────────────
@@ -65,9 +50,14 @@ public interface TransferService {
             Pageable pageable
     );
 
-    List<TransferResponseDTO> getMyTransfers(Integer operatorId);
+    /**
+     * ✅ CORRECTION : vraie pagination au lieu d'une liste limitée à 50 en dur.
+     * Le controller passe le Pageable (page, size, sort).
+     * Exemple : GET /api/transfers/my/5?page=0&size=20
+     */
+    Page<TransferResponseDTO> getMyTransfers(Integer operatorId, Pageable pageable);
 
-    // ─── ERP Data (exposés via ce service pour isoler la datasource ERP) ─────
+    // ─── ERP Data ─────────────────────────────────────────────────────────────
 
     ErpArticleDTO getArticleByCode(String itemCode);
 
@@ -77,11 +67,11 @@ public interface TransferService {
 
     List<ErpStockDTO> getStockByLocation(String location);
 
+    List<ErpStockDTO> getStockByLot(String lotNumber);
+
+    ErpLocationDTO getLocationInfo(String locationCode);
+
     // ─── Dashboard ────────────────────────────────────────────────────────────
 
     TransferDashboardDTO getDashboard();
-
-
-    List<ErpStockDTO> getStockByLot(String lotNumber);
-    ErpLocationDTO getLocationInfo(String locationCode);
 }

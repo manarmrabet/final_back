@@ -76,10 +76,25 @@ public class TransferController {
         return ResponseEntity.ok(ApiResponse.success(transferService.getById(id)));
     }
 
+    /**
+     * ✅ CORRECTION : vraie pagination exposée au client.
+     *
+     * Avant : GET /api/transfers/my/{operatorId}
+     *         → retournait toujours les 50 premiers, pas de contrôle côté client
+     *
+     * Après : GET /api/transfers/my/{operatorId}?page=0&size=20
+     *         → le client choisit la page et la taille
+     *         → page=0&size=20 par défaut pour ne pas casser le mobile existant
+     */
     @GetMapping("/my/{operatorId}")
-    public ResponseEntity<ApiResponse<List<TransferResponseDTO>>> getMyTransfers(
-            @PathVariable Integer operatorId) {
-        return ResponseEntity.ok(ApiResponse.success(transferService.getMyTransfers(operatorId)));
+    public ResponseEntity<ApiResponse<PagedResponse<TransferResponseDTO>>> getMyTransfers(
+            @PathVariable Integer operatorId,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(
+                PagedResponse.of(transferService.getMyTransfers(
+                        operatorId,
+                        PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))))));
     }
 
     @PutMapping("/{id}/validate")
@@ -100,7 +115,7 @@ public class TransferController {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // ERP DATA — EXISTANTS
+    // ERP DATA
     // ══════════════════════════════════════════════════════════════════════
 
     @GetMapping("/erp/articles/{code}")
@@ -125,36 +140,15 @@ public class TransferController {
         return ResponseEntity.ok(ApiResponse.success(transferService.getStockByLocation(location)));
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // ERP DATA — NOUVEAUX (workflow scan carton)
-    // ══════════════════════════════════════════════════════════════════════
-
-    /**
-     * GET /api/transfers/erp/stock/lot/{lotNumber}
-     *
-     * Récupère le stock ERP par numéro de lot (t_clot).
-     * Utilisé par Flutter au scan du 1er carton :
-     *   scan 202619261819 → article + magasin source + emplacement source
-     *
-     * FIX 403 : cet endpoint manquait → Spring retournait 403 par défaut.
-     */
     @GetMapping("/erp/stock/lot/{lotNumber}")
     public ResponseEntity<ApiResponse<List<ErpStockDTO>>> getStockByLot(
             @PathVariable String lotNumber) {
-        return ResponseEntity.ok(ApiResponse.success(
-                transferService.getStockByLot(lotNumber)));
+        return ResponseEntity.ok(ApiResponse.success(transferService.getStockByLot(lotNumber)));
     }
 
-    /**
-     * GET /api/transfers/erp/location/{locationCode}
-     *
-     * Vérifie si l'emplacement destination existe et retourne son magasin (t_cwar).
-     * Utilisé pour détecter les transferts inter-magasin.
-     */
     @GetMapping("/erp/location/{locationCode}")
     public ResponseEntity<ApiResponse<ErpLocationDTO>> getLocationInfo(
             @PathVariable String locationCode) {
-        return ResponseEntity.ok(ApiResponse.success(
-                transferService.getLocationInfo(locationCode)));
+        return ResponseEntity.ok(ApiResponse.success(transferService.getLocationInfo(locationCode)));
     }
 }

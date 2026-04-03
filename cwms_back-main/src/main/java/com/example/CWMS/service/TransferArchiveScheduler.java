@@ -4,13 +4,16 @@ import com.example.CWMS.model.cwms.StockTransfer;
 import com.example.CWMS.repository.cwms.StockTransferRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.io.FileWriter;
-import java.io.PrintWriter;
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
@@ -24,69 +27,71 @@ import java.util.stream.Collectors;
 @Slf4j
 public class TransferArchiveScheduler {
 
-    private static final int    BATCH_SIZE   = 500;
-    private static final String ARCHIVE_DIR  = "archives/transfers/";
+    private static final int BATCH_SIZE = 500;
 
-    private static final List<String> ARCHIVABLE_STATUSES =
-            List.of("DONE", "CANCELLED", "ERROR");
+    // ✅ CORRECTION : chemin lu depuis application.properties
+    // Même propriété que TransferArchiveController → cohérence garantie
+    @Value("${cwms.archive.dir}")
+    private String archiveDir;
+
+    // ✅ CORRECTION : liste d'enums typés au lieu de List<String>
+    private static final List<StockTransfer.TransferStatus> ARCHIVABLE_STATUSES = List.of(
+            StockTransfer.TransferStatus.DONE,
+            StockTransfer.TransferStatus.CANCELLED,
+            StockTransfer.TransferStatus.ERROR
+    );
 
     private final StockTransferRepository transferRepo;
     private final TransactionTemplate     txTemplate;
 
     /**
      * Archivage automatique : 1er jour de chaque mois à 02h00.
-     * - Exporte TOUS les transferts terminés du mois précédent dans un CSV.
+     * - Exporte tous les transferts terminés du mois précédent dans un CSV.
      * - Supprime ces lignes de la table stock_transfers.
      */
     @Scheduled(cron = "${cwms.archive.cron:0 0 2 1 * *}")
     public void archiveMonthlyTransfers() {
 
-        // Période : le mois précédent complet
         LocalDate firstDayOfLastMonth = LocalDate.now().minusMonths(1).withDayOfMonth(1);
         LocalDateTime from = firstDayOfLastMonth.atStartOfDay();
         LocalDateTime to   = firstDayOfLastMonth.plusMonths(1).atStartOfDay().minusNanos(1);
 
         String monthLabel = firstDayOfLastMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"));
-        log.info("▶ Archivage mensuel démarré — période : {}", monthLabel);
+        log.info("Archivage mensuel démarré — période : {}", monthLabel);
 
         long totalArchived = 0;
         int  batchNumber   = 0;
 
-        // Nom du fichier CSV
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        String fileName  = ARCHIVE_DIR + "transfers_" + monthLabel + "_" + timestamp + ".csv";
+        String fileName  = archiveDir + "transfers_" + monthLabel + "_" + timestamp + ".csv";
 
         try {
-            Files.createDirectories(Paths.get(ARCHIVE_DIR));
+            Files.createDirectories(Paths.get(archiveDir));
 
-            try (PrintWriter writer = new PrintWriter(new FileWriter(fileName, java.nio.charset.StandardCharsets.UTF_8))) {
+            // ✅ CORRECTION : BufferedWriter au lieu de PrintWriter direct
+            // Réduit les appels système (flush par buffer de 8Ko au lieu de ligne par ligne)
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(
+                            new FileOutputStream(fileName), StandardCharsets.UTF_8))) {
 
                 // BOM UTF-8 pour Excel
-                writer.print('\uFEFF');
+                writer.write('\uFEFF');
 
-                // En-têtes
-                writer.println(
-                        "ID;Date création;Code article;Nom article;Lot;" +
-                                "Source;Destination;Entrepôt source;Entrepôt dest;" +
-                                "Quantité;Unité;Statut;Type;Opérateur;Notes;Date complétion"
-                );
+                writer.write("ID;Date création;Code article;Nom article;Lot;" +
+                        "Source;Destination;Entrepôt source;Entrepôt dest;" +
+                        "Quantité;Unité;Statut;Type;Opérateur;Notes;Date complétion");
+                writer.newLine();
 
                 List<StockTransfer> batch;
 
                 do {
-                    final LocalDateTime fFrom = from;
-                    final LocalDateTime fTo   = to;
-
                     batch = transferRepo.findTransfersForArchive(
-                            fFrom, fTo, ARCHIVABLE_STATUSES, PageRequest.of(0, BATCH_SIZE));
+                            from, to, ARCHIVABLE_STATUSES, PageRequest.of(0, BATCH_SIZE));
 
-                    final List<StockTransfer> monthBatch = batch;
+                    if (batch.isEmpty()) break;
 
-                    if (monthBatch.isEmpty()) break;
-
-                    // Écriture CSV
-                    for (StockTransfer t : monthBatch) {
-                        writer.printf("%d;%s;%s;%s;%s;%s;%s;%s;%s;%d;%s;%s;%s;%s;%s;%s%n",
+                    for (StockTransfer t : batch) {
+                        writer.write(String.format("%d;%s;%s;%s;%s;%s;%s;%s;%s;%d;%s;%s;%s;%s;%s;%s",
                                 t.getId(),
                                 nvl(t.getCreatedAt()),
                                 nvl(t.getErpItemCode()),
@@ -98,18 +103,19 @@ public class TransferArchiveScheduler {
                                 nvl(t.getDestWarehouse()),
                                 t.getQuantity() != null ? t.getQuantity() : 0,
                                 nvl(t.getUnit()),
-                                nvl(t.getStatus()),
-                                nvl(t.getTransferType()),
+                                // ✅ .name() pour convertir l'enum en String
+                                t.getStatus()       != null ? t.getStatus().name()       : "",
+                                t.getTransferType() != null ? t.getTransferType().name() : "",
                                 t.getOperator() != null
                                         ? csvEscape(t.getOperator().getFirstName() + " " + t.getOperator().getLastName())
                                         : "",
                                 csvEscape(t.getNotes()),
                                 nvl(t.getCompletedAt())
-                        );
+                        ));
+                        writer.newLine();
                     }
 
-                    // Suppression en base dans une transaction
-                    final List<Long> ids = monthBatch.stream()
+                    final List<Long> ids = batch.stream()
                             .map(StockTransfer::getId)
                             .collect(Collectors.toList());
 
@@ -119,24 +125,22 @@ public class TransferArchiveScheduler {
                     });
 
                     batchNumber++;
-                    totalArchived += monthBatch.size();
-
+                    totalArchived += batch.size();
                     log.info("  Lot #{} : {} transferts archivés (total={})",
-                            batchNumber, monthBatch.size(), totalArchived);
+                            batchNumber, batch.size(), totalArchived);
 
                 } while (batch.size() == BATCH_SIZE);
             }
 
             if (totalArchived == 0) {
-                // Supprimer le fichier vide
                 Files.deleteIfExists(Paths.get(fileName));
-                log.info("▶ Archivage terminé — aucun transfert éligible pour {}", monthLabel);
+                log.info("Archivage terminé — aucun transfert éligible pour {}", monthLabel);
             } else {
-                log.info("▶ Archivage terminé — {} transferts exportés dans : {}", totalArchived, fileName);
+                log.info("Archivage terminé — {} transferts exportés dans : {}", totalArchived, fileName);
             }
 
         } catch (Exception e) {
-            log.error("❌ Échec de l'archivage mensuel : {}", e.getMessage(), e);
+            log.error("Échec de l'archivage mensuel : {}", e.getMessage(), e);
         }
     }
 

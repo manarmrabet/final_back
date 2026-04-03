@@ -28,13 +28,14 @@ public class EmailValidationServiceImpl implements EmailValidationService {
     private static final int SMTP_TIMEOUT_MS = 4000; // 4s pour le handshake SMTP
     private static final int SMTP_PORT       = 25;
 
-    // Adresse expéditeur fictive pour le handshake SMTP (doit avoir l'air légitime)
+    // Adresse expéditeur fictive pour le handshake SMTP
     private static final String SENDER_EMAIL = "verify@cwms-check.com";
 
     /**
-     * Point d'entrée principal.
+     * Point d'entrée principal — seule méthode publique de cette classe.
      * @return true si l'email est joignable, false sinon
      */
+    @Override
     public boolean isEmailReachable(String email) {
         if (email == null || !email.contains("@")) return false;
 
@@ -57,21 +58,23 @@ public class EmailValidationServiceImpl implements EmailValidationService {
         }
 
         // Aucun serveur n'a répondu → on laisse passer par sécurité
-        // (évite de bloquer des emails valides si le réseau est restrictif)
         log.warn("Aucun serveur MX n'a répondu pour {} — validation ignorée (fail-open)", email);
         return true;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // ÉTAPE 1 : Résolution DNS des enregistrements MX
+    // PRIVÉ — détails d'implémentation non exposés dans l'interface
     // ─────────────────────────────────────────────────────────────
-    public List<String> resolveMxRecords(String domain) {
+
+    /**
+     * Résout les enregistrements MX d'un domaine via DNS.
+     */
+    private List<String> resolveMxRecords(String domain) {
         List<String> mxHosts = new ArrayList<>();
         try {
             Hashtable<String, String> env = new Hashtable<>();
             env.put("java.naming.factory.initial", "com.sun.jndi.dns.DnsContextFactory");
             env.put("java.naming.provider.url", "dns:");
-            // Timeout DNS via propriétés JNDI
             env.put("com.sun.jndi.dns.timeout.initial", String.valueOf(DNS_TIMEOUT_MS));
             env.put("com.sun.jndi.dns.timeout.retries", "1");
 
@@ -86,7 +89,6 @@ public class EmailValidationServiceImpl implements EmailValidationService {
                     String[] parts = record.split("\\s+");
                     if (parts.length >= 2) {
                         String host = parts[1];
-                        // Supprimer le point final s'il existe
                         if (host.endsWith(".")) host = host.substring(0, host.length() - 1);
                         mxHosts.add(host);
                         log.debug("MX Record trouvé pour {} : {}", domain, host);
@@ -99,16 +101,14 @@ public class EmailValidationServiceImpl implements EmailValidationService {
         return mxHosts;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // ÉTAPE 2 : SMTP Handshake (EHLO → MAIL FROM → RCPT TO)
-    // ─────────────────────────────────────────────────────────────
-
     /**
-     * @return Boolean.TRUE  → adresse acceptée
+     * Tente un handshake SMTP (EHLO → MAIL FROM → RCPT TO) pour vérifier l'adresse.
+     *
+     * @return Boolean.TRUE  → adresse acceptée par le serveur
      *         Boolean.FALSE → adresse rejetée (550/551/553...)
-     *         null          → serveur injoignable (timeout, connexion refusée)
+     *         null          → serveur injoignable (timeout, port bloqué)
      */
-    public Boolean trySmtpHandshake(String mxHost, String recipientEmail) {
+    private Boolean trySmtpHandshake(String mxHost, String recipientEmail) {
         log.debug("Tentative SMTP sur {} pour {}", mxHost, recipientEmail);
 
         try (Socket socket = new Socket()) {
@@ -126,43 +126,39 @@ public class EmailValidationServiceImpl implements EmailValidationService {
                     return null;
                 }
 
-                // EHLO
                 writer.println("EHLO cwms-check.com");
                 String ehloResponse = readSmtpResponse(reader);
                 if (!ehloResponse.startsWith("2")) return null;
 
-                // MAIL FROM
                 writer.println("MAIL FROM:<" + SENDER_EMAIL + ">");
                 String mailFromResponse = readSmtpResponse(reader);
                 if (!mailFromResponse.startsWith("2")) return null;
 
-                // RCPT TO — C'est ici qu'on sait si l'adresse existe
+                // RCPT TO — c'est ici qu'on sait si l'adresse existe
                 writer.println("RCPT TO:<" + recipientEmail + ">");
                 String rcptResponse = readSmtpResponse(reader);
 
-                // QUIT proprement
                 writer.println("QUIT");
 
                 log.info("Réponse RCPT TO pour {} sur {} : {}", recipientEmail, mxHost, rcptResponse);
 
-                // Codes 2xx → accepté
                 if (rcptResponse.startsWith("2")) return Boolean.TRUE;
 
-                // Codes 550, 551, 553, 5.1.1 → utilisateur inconnu
+                // Codes 550, 551, 553 → utilisateur inconnu
                 if (rcptResponse.startsWith("55") || rcptResponse.startsWith("5.1")) {
                     return Boolean.FALSE;
                 }
 
-                // Codes 4xx (erreur temporaire) ou 250 avec greylisting → on laisse passer
+                // Codes 4xx (erreur temporaire) → on laisse passer
                 return Boolean.TRUE;
             }
 
         } catch (java.net.SocketTimeoutException e) {
             log.warn("Timeout SMTP sur {} après {}ms", mxHost, SMTP_TIMEOUT_MS);
-            return null; // Serveur injoignable
+            return null;
         } catch (java.net.ConnectException e) {
             log.warn("Connexion refusée sur {}:{} — port 25 probablement bloqué", mxHost, SMTP_PORT);
-            return null; // Port bloqué (courant chez les hébergeurs cloud)
+            return null;
         } catch (Exception e) {
             log.warn("Erreur SMTP inattendue sur {} : {}", mxHost, e.getMessage());
             return null;
@@ -170,16 +166,15 @@ public class EmailValidationServiceImpl implements EmailValidationService {
     }
 
     /**
-     * Lit une réponse SMTP multi-lignes (ex: codes 220, 250 avec plusieurs lignes).
-     * Une réponse se termine quand la ligne ne contient pas de tiret après le code.
+     * Lit une réponse SMTP multi-lignes.
+     * Une réponse se termine quand le 4ème caractère est un espace (pas un tiret).
      * Ex: "250-SIZE 35882577" (continue) vs "250 OK" (fin)
      */
-    public String readSmtpResponse(BufferedReader reader) throws Exception {
+    private String readSmtpResponse(BufferedReader reader) throws Exception {
         StringBuilder response = new StringBuilder();
         String line;
         while ((line = reader.readLine()) != null) {
             response.append(line).append("\n");
-            // Le 4ème caractère est un espace → dernière ligne de la réponse
             if (line.length() >= 4 && line.charAt(3) == ' ') break;
         }
         return response.toString().trim();

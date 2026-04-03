@@ -15,13 +15,20 @@ import java.util.List;
 public interface StockTransferRepository extends JpaRepository<StockTransfer, Long> {
 
     // ─── Par statut ───────────────────────────────────────────────────────
-    Page<StockTransfer> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
-    List<StockTransfer> findByStatus(String status);
-    long countByStatus(String status);
+    Page<StockTransfer> findByStatusOrderByCreatedAtDesc(StockTransfer.TransferStatus status, Pageable pageable);
+    List<StockTransfer> findByStatus(StockTransfer.TransferStatus status);
+    long countByStatus(StockTransfer.TransferStatus status);
 
     // ─── Par opérateur ────────────────────────────────────────────────────
+
+    /**
+     * ✅ CORRECTION : vraie pagination exposée au lieu du PageRequest(0,50) caché.
+     * Le controller contrôle page/size — l'appelant décide de la limite.
+     */
     Page<StockTransfer> findByOperator_UserIdOrderByCreatedAtDesc(Integer operatorId, Pageable pageable);
-    List<StockTransfer> findByOperator_UserIdAndStatus(Integer operatorId, String status);
+
+    List<StockTransfer> findByOperator_UserIdAndStatus(
+            Integer operatorId, StockTransfer.TransferStatus status);
 
     // ─── Par article ──────────────────────────────────────────────────────
     List<StockTransfer> findByErpItemCodeOrderByCreatedAtDesc(String itemCode);
@@ -113,20 +120,7 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
             Pageable           pageable
     );
 
-    @Query("""
-        SELECT t FROM StockTransfer t
-        WHERE (:sourceWarehouse IS NULL OR t.sourceWarehouse = :sourceWarehouse)
-          AND (:destWarehouse IS NULL OR t.destWarehouse = :destWarehouse)
-        """)
-    Page<StockTransfer> findByWarehouses(
-            @Param("sourceWarehouse") String sourceWarehouse,
-            @Param("destWarehouse")   String destWarehouse,
-            Pageable pageable);
-
-    /**
-     * Récupère les transferts terminés sur une période donnée pour l'archivage mensuel.
-     * Utilisé par TransferArchiveScheduler.
-     */
+    // ─── Archivage mensuel ────────────────────────────────────────────────
     @Query("""
         SELECT t FROM StockTransfer t
         WHERE t.createdAt >= :from
@@ -137,6 +131,8 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
     List<StockTransfer> findTransfersForArchive(
             @Param("from")     LocalDateTime from,
             @Param("to")       LocalDateTime to,
-            @Param("statuses") List<String>  statuses,
+            @Param("statuses") List<StockTransfer.TransferStatus> statuses,
             Pageable           pageable);
+
+    // ✅ findByWarehouses() supprimé — n'était appelé nulle part dans le code
 }
