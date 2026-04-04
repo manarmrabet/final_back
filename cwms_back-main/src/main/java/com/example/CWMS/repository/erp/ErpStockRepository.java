@@ -15,18 +15,14 @@ import java.util.Optional;
 @Repository
 public interface ErpStockRepository extends JpaRepository<ErpStock, Long> {
 
-    // ─── PAGINATION ───────────────────────────────────────────────────────────
-//Récupère tout le stock avec pagination (trié par ID décroissant)
+    // ─── EXISTANT (ne pas toucher) ────────────────────────────────────────────
+
     @Query("SELECT s FROM ErpStock s ORDER BY s.idStockage DESC")
     Page<ErpStock> findAll(Pageable pageable);
-//Cherche toutes les lignes d'un lot spécifique (en ignorant les espaces avec TRIM)
-    // ─── PAR LOT ─────────────────────────────────────────────────────────────
 
     @Query("SELECT s FROM ErpStock s WHERE TRIM(s.lotNumber) = TRIM(:lotNumber)")
     List<ErpStock> findByLotNumber(@Param("lotNumber") String lotNumber);
 
-    // ─── PAR ARTICLE ──────────────────────────────────────────────────────────
-//Liste tout le stock d'un article, trié par emplacement
     @Query("""
         SELECT s FROM ErpStock s
         WHERE TRIM(s.itemCode) = TRIM(:itemCode)
@@ -34,13 +30,8 @@ public interface ErpStockRepository extends JpaRepository<ErpStock, Long> {
         """)
     List<ErpStock> findByItemCode(@Param("itemCode") String itemCode);
 
-    // ─── PAR EMPLACEMENT ──────────────────────────────────────────────────────
-
     @Query("SELECT s FROM ErpStock s WHERE TRIM(s.location) = TRIM(:location)")
     List<ErpStock> findByLocation(@Param("location") String location);
-
-
-    // ─── COMBINÉES ────────────────────────────────────────────────────────────
 
     @Query("""
         SELECT s FROM ErpStock s
@@ -72,24 +63,6 @@ public interface ErpStockRepository extends JpaRepository<ErpStock, Long> {
             @Param("itemCode") String itemCode,
             @Param("location") String location);
 
-
-
-    // ═════════════════════════════════════════════════════════════════════════
-    // TRANSFERT ERP — utilisé par ErpStockUpdater
-    // ═════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Déplace le lot : met à jour t_loca ET t_cwar sur la ligne ERP existante.
-     *
-     * La ligne est identifiée par t_item + t_clot + t_loca source.
-     * t_cwar est mis à jour car le lot peut changer de magasin (inter-magasin).
-     * t_trdt est mis à jour à la date du jour (traçabilité ERP).
-     *
-     * Retourne le nombre de lignes mises à jour :
-     *   0 = lot introuvable à la source (déjà déplacé ou mauvaise donnée)
-     *   1 = succès normal
-     *  >1 = plusieurs lignes trouvées (anomalie données ERP, à logger)
-     */
     @Modifying
     @Query(value = """
         UPDATE dbo_twhinr1401200
@@ -107,4 +80,42 @@ public interface ErpStockRepository extends JpaRepository<ErpStock, Long> {
             @Param("destLocation")   String destLocation,
             @Param("destWarehouse")  String destWarehouse
     );
+
+    // ─── AJOUT MODULE INVENTAIRE ──────────────────────────────────────────────
+
+    /**
+     * Récupère tout le stock d'un magasin (t_cwar).
+     * Utilisé par le moteur de comparaison inventaire.
+     */
+    @Query("SELECT s FROM ErpStock s WHERE TRIM(s.warehouseCode) = TRIM(:warehouseCode)")
+    List<ErpStock> findByWarehouseCode(@Param("warehouseCode") String warehouseCode);
+
+    /**
+     * Récupère le stock ERP pour une liste de locations (emplacements).
+     * La "zone" en collecte correspond au préfixe ou code de l'emplacement.
+     * Utilisé pour comparer ERP vs collecté sur une zone scannée.
+     */
+    @Query("SELECT s FROM ErpStock s WHERE TRIM(s.location) IN :locations")
+    List<ErpStock> findByLocationIn(@Param("locations") List<String> locations);
+
+    /**
+     * Récupère le stock ERP pour une liste de magasins.
+     * Utilisé quand on scanne plusieurs zones d'un même magasin.
+     */
+    @Query("SELECT s FROM ErpStock s WHERE TRIM(s.warehouseCode) IN :warehouseCodes")
+    List<ErpStock> findByWarehouseCodeIn(@Param("warehouseCodes") List<String> warehouseCodes);
+
+    /**
+     * Récupère les locations distinctes d'un magasin.
+     * Utilisé pour afficher les zones disponibles dans le formulaire web.
+     */
+    @Query("SELECT DISTINCT TRIM(s.location) FROM ErpStock s WHERE TRIM(s.warehouseCode) = TRIM(:warehouseCode) AND s.location IS NOT NULL")
+    List<String> findDistinctLocationsByWarehouse(@Param("warehouseCode") String warehouseCode);
+
+    /**
+     * Récupère les magasins distincts disponibles dans le stock ERP.
+     * Utilisé pour alimenter le sélecteur magasin dans le web.
+     */
+    @Query("SELECT DISTINCT TRIM(s.warehouseCode) FROM ErpStock s WHERE s.warehouseCode IS NOT NULL")
+    List<String> findDistinctWarehouses();
 }
