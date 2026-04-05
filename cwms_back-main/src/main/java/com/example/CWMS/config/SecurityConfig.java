@@ -76,6 +76,8 @@ public class SecurityConfig {
                         // PRODUCTION LOGS
                         .requestMatchers("/api/production/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN", "ROLE_MAGASINIER")
+                        .requestMatchers("/api/inventory/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN", "ROLE_MAGASINIER")
                         // 6. MENU ITEMS & AUDIT
                         .requestMatchers(HttpMethod.GET, "/api/menu-items/**").authenticated()
                         .requestMatchers("/api/menu-items/**").hasAuthority("ROLE_ADMIN")

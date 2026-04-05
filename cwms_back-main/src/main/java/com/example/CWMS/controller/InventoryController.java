@@ -1,6 +1,11 @@
 package com.example.CWMS.controller;
 
-import com.example.CWMS.dto.*;
+import com.example.CWMS.dto.AddCollectLineRequest;
+import com.example.CWMS.dto.CollectLineDTO;
+import com.example.CWMS.dto.CollectTemplateDTO;
+import com.example.CWMS.dto.CreateSessionRequest;
+import com.example.CWMS.dto.InventoryReportDTO;
+import com.example.CWMS.dto.InventorySessionDTO;
 import com.example.CWMS.iservice.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +21,6 @@ import java.util.List;
 public class InventoryController {
 
     private final InventoryService inventoryService;
-
-    // ── Sessions ──────────────────────────────────────────────────
 
     @GetMapping("/sessions")
     public ResponseEntity<List<InventorySessionDTO>> getAllSessions() {
@@ -41,8 +44,6 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.validateSession(id, auth.getName()));
     }
 
-    // ── Lignes ────────────────────────────────────────────────────
-
     @PostMapping("/lines")
     public ResponseEntity<CollectLineDTO> addLine(
             @RequestBody AddCollectLineRequest request, Authentication auth) {
@@ -60,8 +61,6 @@ public class InventoryController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Templates ─────────────────────────────────────────────────
-
     @GetMapping("/templates")
     public ResponseEntity<List<CollectTemplateDTO>> getTemplates() {
         return ResponseEntity.ok(inventoryService.getActiveTemplates());
@@ -72,8 +71,6 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.createTemplate(dto));
     }
 
-    // ── Données ERP (pour alimenter les dropdowns web/mobile) ─────
-
     @GetMapping("/erp/warehouses")
     public ResponseEntity<List<String>> getWarehouses() {
         return ResponseEntity.ok(inventoryService.getErpWarehouses());
@@ -83,8 +80,6 @@ public class InventoryController {
     public ResponseEntity<List<String>> getLocations(@RequestParam String warehouseCode) {
         return ResponseEntity.ok(inventoryService.getErpLocationsByWarehouse(warehouseCode));
     }
-
-    // ── Rapport & Export ──────────────────────────────────────────
 
     @PostMapping("/sessions/{sessionId}/report")
     public ResponseEntity<InventoryReportDTO> generateReport(
