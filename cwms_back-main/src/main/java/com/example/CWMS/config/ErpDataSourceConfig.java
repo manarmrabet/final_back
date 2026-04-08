@@ -7,6 +7,7 @@ import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -67,5 +68,10 @@ public class ErpDataSourceConfig {
     public PlatformTransactionManager erpTransactionManager(
             @Qualifier("erpEntityManagerFactory") LocalContainerEntityManagerFactoryBean factory) {
         return new JpaTransactionManager(factory.getObject());
+    }
+    @Bean(name = "erpNamedJdbc")
+    public NamedParameterJdbcTemplate erpNamedJdbc(
+            @Qualifier("erpDataSource") DataSource ds) {
+        return new NamedParameterJdbcTemplate(ds);
     }
 }
