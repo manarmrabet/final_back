@@ -1,0 +1,8 @@
+ID;CreatedAt;User;Action;Type;Severity;Endpoint;Status;OldValue;NewValue
+685;2026-03-21T22:21:35.377029200;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""
+686;2026-03-21T22:22:05.304465200;admin;MENU_CREATED;CREATE;INFO;null;null;"";"{'menuItemId':33,'label':'sdfghjk','icon':'folder-plus','link':'ppp','parentId':25,'isTitle':false,'isLayout':false,'createdAt':'2026-03-21T22:22:05.2723249','updatedAt':'2026-03-21T22:22:05.2723249'}"
+687;2026-03-21T22:22:20.739197600;admin;MENU_SAVED;CREATE;INFO;null;null;"";""
+688;2026-03-21T22:23:06.602478600;admin;MENU_DELETED;DELETE;INFO;null;null;"MenuItem(menuItemId=33, label=sdfghjk, icon=folder-plus, link=ppp, isTitle=false, isLayout=false, createdAt=2026-03-21T22:22:05.272325, updatedAt=2026-03-21T22:22:05.272325)";""
+689;2026-03-21T22:40:18.092110300;admin;MENU_CREATED;CREATE;INFO;null;null;"";"{'menuItemId':34,'label':'gcvhb,jn,,','icon':'send','link':'pppp','parentId':4,'isTitle':false,'isLayout':false,'createdAt':'2026-03-21T22:40:18.0761002','updatedAt':'2026-03-21T22:40:18.0761002'}"
+690;2026-03-21T22:40:28.445577;admin;MENU_SAVED;CREATE;INFO;null;null;"";""
+691;2026-03-21T22:44:16.101653900;admin;MENU_DELETED;DELETE;INFO;null;null;"MenuItem(menuItemId=34, label=gcvhb,jn,,, icon=send, link=pppp, isTitle=false, isLayout=false, createdAt=2026-03-21T22:40:18.076100, updatedAt=2026-03-21T22:40:18.076100)";""

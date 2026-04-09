@@ -116,6 +116,13 @@ public class StockDashboardServiceImpl implements StockDashboardService {
             response.put("byCategory", byCategory);
             response.put("topItems", topItems);
             response.put("totalQty", allStock.stream().mapToDouble(ErpStock::getQuantityAvailable).sum());
+
+
+            response.put("totalArticles",   itemCodes.size());           // nb de codes articles distincts
+            response.put("totalLocations",  allStock.stream()
+                    .map(ErpStock::getLocation)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet()).size());  // nb d'emplacements distincts
             response.put("lastUpdate", new Date());
 
             return response;
