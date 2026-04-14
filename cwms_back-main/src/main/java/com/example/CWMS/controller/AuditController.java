@@ -1,6 +1,7 @@
 package com.example.CWMS.controller;
 
 import com.example.CWMS.dto.ApiResponse;
+import com.example.CWMS.dto.ArchiveFileDTO;
 import com.example.CWMS.dto.AuditLogDTO;
 import com.example.CWMS.model.cwms.AuditLog.EventType;
 import com.example.CWMS.model.cwms.AuditLog.Severity;
@@ -29,6 +30,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
+
+
+
+import java.util.Comparator;
+import java.time.format.DateTimeFormatter;
 @RestController
 @RequestMapping("/api/audit")
 @RequiredArgsConstructor
@@ -89,14 +96,36 @@ public class AuditController {
 
 
     //Liste les fichiers CSV disponibles sur le serveur
+    // Remplace l'ancienne méthode listArchives()
     @GetMapping("/archives")
-    public ResponseEntity<ApiResponse<List<String>>> listArchives() {
+    public ResponseEntity<ApiResponse<List<ArchiveFileDTO>>> listArchives() {
         File folder = new File(ARCHIVE_DIR);
         if (!folder.exists()) return ResponseEntity.ok(ApiResponse.success(List.of()));
 
-        List<String> files = Arrays.stream(folder.listFiles())
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+
+        List<ArchiveFileDTO> files = Arrays.stream(folder.listFiles())
                 .filter(f -> f.getName().endsWith(".csv"))
-                .map(File::getName)
+                .sorted(Comparator.comparing(File::getName).reversed())
+                .map(f -> {
+                    // Extraction de la date depuis le nom : audit_backup_20260330_233800.csv
+                    LocalDateTime date = null;
+                    try {
+                        String namePart = f.getName()
+                                .replace("audit_backup_", "")
+                                .replace(".csv", "");
+                        date = LocalDateTime.parse(namePart, fmt);
+                    } catch (Exception ignored) {}
+
+                    // Comptage des lignes (hors header)
+                    int lines = 0;
+                    try (var br = new java.io.BufferedReader(new java.io.FileReader(f))) {
+                        lines = (int) br.lines().count() - 1; // -1 pour le header
+                        if (lines < 0) lines = 0;
+                    } catch (Exception ignored) {}
+
+                    return new ArchiveFileDTO(f.getName(), f.length(), date, lines);
+                })
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(ApiResponse.success(files));
