@@ -20,12 +20,27 @@ public class InventorySession {
     @Column(nullable = false)
     private String name;
 
-    // Code magasin ERP (t_cwar dans ErpStock.warehouseCode)
+    /** Code magasin ERP (t_cwar) */
     @Column(name = "warehouse_code", nullable = false)
     private String warehouseCode;
 
     @Column(name = "warehouse_label")
     private String warehouseLabel;
+
+    /**
+     * Zone ERP optionnelle (t_zone de dbo_twhwmd300310).
+     * Permet de restreindre l'inventaire à une zone précise du magasin.
+     */
+    @Column(name = "warehouse_zone", length = 3)
+    private String warehouseZone;
+
+    /**
+     * Champs de collecte sélectionnés à la création de la session, stockés en JSON.
+     * Exemple : ["ARTICLE","LOT","QUANTITE"]
+     * Remplace le système de templates séparés.
+     */
+    @Column(name = "collect_fields_json", length = 500)
+    private String collectFieldsJson;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

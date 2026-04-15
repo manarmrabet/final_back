@@ -13,6 +13,10 @@ public class InventoryReportDTO {
     private Long sessionId;
     private String sessionName;
     private String warehouseCode;
+
+    /** Zone ERP de la session (peut être null) */
+    private String warehouseZone;
+
     private int totalErp;
     private int totalCollecte;
     private int totalConforme;

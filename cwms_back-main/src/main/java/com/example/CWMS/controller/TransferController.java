@@ -76,16 +76,6 @@ public class TransferController {
         return ResponseEntity.ok(ApiResponse.success(transferService.getById(id)));
     }
 
-    /**
-     * ✅ CORRECTION : vraie pagination exposée au client.
-     *
-     * Avant : GET /api/transfers/my/{operatorId}
-     *         → retournait toujours les 50 premiers, pas de contrôle côté client
-     *
-     * Après : GET /api/transfers/my/{operatorId}?page=0&size=20
-     *         → le client choisit la page et la taille
-     *         → page=0&size=20 par défaut pour ne pas casser le mobile existant
-     */
     @GetMapping("/my/{operatorId}")
     public ResponseEntity<ApiResponse<PagedResponse<TransferResponseDTO>>> getMyTransfers(
             @PathVariable Integer operatorId,
@@ -117,6 +107,19 @@ public class TransferController {
     // ══════════════════════════════════════════════════════════════════════
     // ERP DATA
     // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * ✅ ENDPOINT MANQUANT — ajouté.
+     * GET /api/transfers/erp/warehouses
+     *
+     * Retourne la liste distincte des codes magasin (t_cwar) présents
+     * dans dbo_twhinr1401200. Utilisé par Flutter pour alimenter
+     * le sélecteur de magasin source.
+     */
+    @GetMapping("/erp/warehouses")
+    public ResponseEntity<ApiResponse<List<String>>> getDistinctWarehouses() {
+        return ResponseEntity.ok(ApiResponse.success(transferService.getDistinctWarehouses()));
+    }
 
     @GetMapping("/erp/articles/{code}")
     public ResponseEntity<ApiResponse<ErpArticleDTO>> getArticleByCode(@PathVariable String code) {

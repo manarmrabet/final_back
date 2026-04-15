@@ -2,7 +2,6 @@ package com.example.CWMS.controller;
 
 import com.example.CWMS.dto.AddCollectLineRequest;
 import com.example.CWMS.dto.CollectLineDTO;
-import com.example.CWMS.dto.CollectTemplateDTO;
 import com.example.CWMS.dto.CreateSessionRequest;
 import com.example.CWMS.dto.InventoryReportDTO;
 import com.example.CWMS.dto.InventorySessionDTO;
@@ -21,6 +20,8 @@ import java.util.List;
 public class InventoryController {
 
     private final InventoryService inventoryService;
+
+    // ── Sessions ──────────────────────────────────────────────────────────────
 
     @GetMapping("/sessions")
     public ResponseEntity<List<InventorySessionDTO>> getAllSessions() {
@@ -44,6 +45,8 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.validateSession(id, auth.getName()));
     }
 
+    // ── Lignes ────────────────────────────────────────────────────────────────
+
     @PostMapping("/lines")
     public ResponseEntity<CollectLineDTO> addLine(
             @RequestBody AddCollectLineRequest request, Authentication auth) {
@@ -61,25 +64,34 @@ public class InventoryController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/templates")
-    public ResponseEntity<List<CollectTemplateDTO>> getTemplates() {
-        return ResponseEntity.ok(inventoryService.getActiveTemplates());
-    }
+    // ── Données ERP ───────────────────────────────────────────────────────────
 
-    @PostMapping("/templates")
-    public ResponseEntity<CollectTemplateDTO> createTemplate(@RequestBody CollectTemplateDTO dto) {
-        return ResponseEntity.ok(inventoryService.createTemplate(dto));
-    }
-
+    /**
+     * Liste des magasins ERP disponibles.
+     */
     @GetMapping("/erp/warehouses")
     public ResponseEntity<List<String>> getWarehouses() {
         return ResponseEntity.ok(inventoryService.getErpWarehouses());
     }
 
+    /**
+     * Emplacements d'un magasin (optionnellement filtrés par zone).
+     */
     @GetMapping("/erp/locations")
     public ResponseEntity<List<String>> getLocations(@RequestParam String warehouseCode) {
         return ResponseEntity.ok(inventoryService.getErpLocationsByWarehouse(warehouseCode));
     }
+
+    /**
+     * Zones distinctes d'un magasin ERP (t_zone depuis dbo_twhwmd300310).
+     * Utilisé dans le formulaire de création de session pour le sélecteur de zone.
+     */
+    @GetMapping("/erp/zones")
+    public ResponseEntity<List<String>> getZones(@RequestParam String warehouseCode) {
+        return ResponseEntity.ok(inventoryService.getErpZonesByWarehouse(warehouseCode));
+    }
+
+    // ── Rapport ───────────────────────────────────────────────────────────────
 
     @PostMapping("/sessions/{sessionId}/report")
     public ResponseEntity<InventoryReportDTO> generateReport(
@@ -91,6 +103,8 @@ public class InventoryController {
     public ResponseEntity<InventoryReportDTO> getReport(@PathVariable Long sessionId) {
         return ResponseEntity.ok(inventoryService.getReport(sessionId));
     }
+
+    // ── Export ────────────────────────────────────────────────────────────────
 
     @GetMapping("/sessions/{sessionId}/export/collect")
     public ResponseEntity<byte[]> exportCollect(@PathVariable Long sessionId) {

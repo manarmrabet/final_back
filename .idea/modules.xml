@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/cwms_back-main/CWMS.iml" filepath="$PROJECT_DIR$/cwms_back-main/CWMS.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/cwms_back-main.iml" filepath="$PROJECT_DIR$/.idea/cwms_back-main.iml" />
     </modules>
   </component>

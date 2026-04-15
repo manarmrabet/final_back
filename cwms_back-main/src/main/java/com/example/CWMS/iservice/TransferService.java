@@ -14,14 +14,6 @@ import java.util.List;
 
 /**
  * Interface du service de transfert interne de stock.
- *
- * Principe métier :
- *  1. Valider l'article via ERP (existe, actif)
- *  2. Valider le stock ERP (lot présent à la source)
- *  3. Valider les emplacements (source ≠ destination)
- *  4. Enregistrer le transfert dans CWMSDB
- *  5. Mettre à jour l'ERP (non bloquant)
- *  6. L'audit est automatique via @Auditable
  */
 public interface TransferService {
 
@@ -50,14 +42,15 @@ public interface TransferService {
             Pageable pageable
     );
 
-    /**
-     * ✅ CORRECTION : vraie pagination au lieu d'une liste limitée à 50 en dur.
-     * Le controller passe le Pageable (page, size, sort).
-     * Exemple : GET /api/transfers/my/5?page=0&size=20
-     */
     Page<TransferResponseDTO> getMyTransfers(Integer operatorId, Pageable pageable);
 
     // ─── ERP Data ─────────────────────────────────────────────────────────────
+
+    /**
+     * ✅ AJOUTÉ — liste distincte des t_cwar depuis dbo_twhinr1401200.
+     * Endpoint : GET /api/transfers/erp/warehouses
+     */
+    List<String> getDistinctWarehouses();
 
     ErpArticleDTO getArticleByCode(String itemCode);
 
