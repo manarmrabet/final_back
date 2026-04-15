@@ -73,6 +73,9 @@ public class SecurityConfig {
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN")
 
 
+                        .requestMatchers("/api/etiquette/**")
+                        .hasAnyAuthority("ROLE_ADMIN","ROLE_MAGASINIER")
+
                         // PRODUCTION LOGS
                         .requestMatchers("/api/production/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN", "ROLE_MAGASINIER")

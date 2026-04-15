@@ -28,7 +28,7 @@ public class ProductionController {
 
     // ── Sortie totale ────────────────────────────────────────────────────────
     @PostMapping("/sortie/totale")
-    @PreAuthorize("hasAnyRole('OPERATEUR','ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('OPERATEUR','ADMIN','MANAGER','MAGASINIER','RESPONSABLE_MAGASINIER')")
     public ResponseEntity<SortieResponseDTO> sortieTotale(
             @Valid @RequestBody SortieRequestDTO req,
             @AuthenticationPrincipal UserDetails user) {
@@ -41,7 +41,7 @@ public class ProductionController {
 
     // ── Sortie partielle ─────────────────────────────────────────────────────
     @PostMapping("/sortie/partielle")
-    @PreAuthorize("hasAnyRole('OPERATEUR','ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('OPERATEUR','ADMIN','MANAGER','MAGASINIER','RESPONSABLE_MAGASINIER')")
     public ResponseEntity<SortieResponseDTO> sortiePartielle(
             @Valid @RequestBody SortieRequestDTO req,
             @AuthenticationPrincipal UserDetails user) {
