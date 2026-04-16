@@ -3,40 +3,44 @@ package com.example.CWMS.dto;
 import lombok.Data;
 
 /**
- * DTO de transfert pour une ligne d'étiquette.
- * Tous les champs sont des String pour simplifier le rendu PDF.
+ * DTO de transfert — une ligne d'étiquette.
  *
- * Mapping colonnes ERP → champs DTO :
- *
+ * Mapping ERP → DTO  (tables autorisées uniquement)
+ * ─────────────────────────────────────────────────────────────────────
  *  twhinh312310.t_rcno   → rcno
  *  twhinh312310.t_rcln   → rcln
  *  twhinh312310.t_sfbp   → sfbp
- *  fixe 'COFAT TUNIS'    → company
- *  fixe 'A'              → rotationClass  (tqmptc020120 absent)
+ *  'COFAT TUNIS'          → company         (valeur fixe)
+ *  'A'                    → rotationClass   (valeur fixe)
  *  twhinh312310.t_item   → item
- *  ttcibd001120.t_dsca   → description
- *  twhltc100310.t_ldat   → validityDate   (t_idat absent de twhinh312310)
+ *  ttcibd001310.t_dsca   → description      (fallback t_dscb > item)
+ *  twhltc100310.t_ldat   → validityDate
  *  twhinh312310.t_qrec   → qty
  *  twhinh312310.t_clot   → labelNumber
- *  twhltc100310.t_frdt   → dateLabel      (t_crdt absent de twhinh312310)
- *  twhwmd400310.t_locc   → location       (t_clan absent de twhwmd400310)
- *  calculé DATEPART      → weekIncoming
- *  twhinh312310.t_mpnr   → mpnr           (Manufacturer Part Number)
+ *  twhltc100310.t_frdt   → dateLabel
+ *  twhwmd400310.t_locc   → location
+ *  DATEPART(t_ldat)       → weekIncoming    (calculé)
+ *  twhinh312310.t_mpnr   → mpnr
+ *  twhltc100310.t_orno   → linkedOrder      ← NOUVEAU (RFr sur étiquette photo)
+ *  ttcibd001120.t_cwun   → unit             ← NOUVEAU
+ * ─────────────────────────────────────────────────────────────────────
  */
 @Data
 public class EtiquetteDTO {
-    private String rcno;           // Numéro réception
-    private String rcln;           // Ligne réception
-    private String sfbp;           // Code fournisseur
-    private String company;        // "COFAT TUNIS" (valeur fixe)
-    private String rotationClass;  // "A" (valeur fixe, tqmptc020120 absent)
-    private String item;           // Code article
-    private String description;    // Description article (t_dsca > t_dscb > item)
-    private String validityDate;   // Date lot formatée dd/MM/yyyy
-    private String qty;            // Quantité reçue
-    private String labelNumber;    // Numéro de lot / étiquette (t_clot)
-    private String dateLabel;      // Date fabrication formatée dd/MM/yyyy
-    private String location;       // Emplacement (t_locc)
-    private String weekIncoming;   // Semaine calculée ex: "16/2026"
-    private String mpnr;           // Manufacturer Part Number (t_mpnr)
+    private String rcno;          // Numéro réception
+    private String rcln;          // Ligne réception
+    private String sfbp;          // Code fournisseur
+    private String company;       // "COFAT TUNIS"
+    private String rotationClass; // "A"
+    private String item;          // Code article
+    private String description;   // Description article
+    private String validityDate;  // dd/MM/yyyy — depuis t_ldat
+    private String qty;           // Quantité reçue
+    private String labelNumber;   // Numéro lot (t_clot)
+    private String dateLabel;     // dd/MM/yyyy — depuis t_frdt
+    private String location;      // Emplacement (t_locc)
+    private String weekIncoming;  // ex: "16/2026"
+    private String mpnr;          // Manufacturer Part Number
+    private String linkedOrder;   // Ordre lié (t_orno) — affiché comme "RFr"
+    private String unit;          // Unité (t_cwun)
 }
