@@ -10,10 +10,9 @@ public interface CollectLineRepository extends JpaRepository<CollectLine, Long> 
 
     List<CollectLine> findBySessionId(Long sessionId);
 
-    List<CollectLine> findBySessionIdAndLocationCode(Long sessionId, String locationCode);
+
 
     int countBySessionId(Long sessionId);
 
-    @Query("SELECT DISTINCT l.locationCode FROM CollectLine l WHERE l.session.id = :sessionId")
-    List<String> findDistinctLocationsBySessionId(@Param("sessionId") Long sessionId);
+
 }

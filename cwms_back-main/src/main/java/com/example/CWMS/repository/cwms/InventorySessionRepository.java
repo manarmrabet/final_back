@@ -11,10 +11,5 @@ public interface InventorySessionRepository extends JpaRepository<InventorySessi
 
     List<InventorySession> findAllByOrderByCreatedAtDesc();
 
-    List<InventorySession> findByStatusOrderByCreatedAtDesc(SessionStatus status);
 
-    List<InventorySession> findByWarehouseCodeOrderByCreatedAtDesc(String warehouseCode);
-
-    @Query("SELECT COUNT(l) FROM CollectLine l WHERE l.session.id = :sessionId")
-    int countLinesBySessionId(@Param("sessionId") Long sessionId);
 }

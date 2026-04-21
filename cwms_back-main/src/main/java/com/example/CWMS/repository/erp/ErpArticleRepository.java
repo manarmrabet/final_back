@@ -16,8 +16,6 @@ public interface ErpArticleRepository extends JpaRepository<ErpArticle, String> 
     @Query("SELECT a FROM ErpArticle a WHERE TRIM(a.itemCode) = TRIM(:itemCode)")
     Optional<ErpArticle> findByItemCode(@Param("itemCode") String itemCode);
 
-    List<ErpArticle> findByDesignationContainingIgnoreCase(String keyword);
-    List<ErpArticle> findByItemGroup(String group);
 
     /**
      * Recherche multicritère : code, désignation, noms abrégés.

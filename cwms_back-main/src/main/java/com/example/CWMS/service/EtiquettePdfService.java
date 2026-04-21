@@ -85,38 +85,37 @@ public class EtiquettePdfService {
         float headerH      = 28f;
         float headerBottom = H - headerH;  // y = 182
 
-        // Carré VERT semaine (coin haut-droit) - PLUS PETIT
-        float weekW = 38f;  // Réduit de 48 à 38
+        // Carré VERT semaine (coin haut-droit)
+        float weekW = 45f; // Ajusté pour correspondre au ratio de l'image 2
         cv.setFillColor(GREEN).rectangle(W - weekW, headerBottom, weekW, headerH).fill();
 
-        // Texte "COFAT TUNIS" — gras, noir, haut-gauche
+        // Texte "COFAT TUNIS"
         txt(doc, pageNumber, s(e.getCompany()), 11f, 6, headerBottom + 10, 160, true, BLACK, TextAlignment.LEFT);
 
-        // Texte "Class Rotation : X" — petit, centré
+        // Texte "Class Rotation : X"
         txt(doc, pageNumber, "Class Rotation : " + s(e.getRotationClass()), 7.5f, 140, headerBottom + 12, 105, false, BLACK, TextAlignment.CENTER);
 
-        // Texte semaine dans le carré vert - NOIR
+        // Texte semaine (ex: 8/26) dans le carré vert
         txt(doc, pageNumber, s(e.getWeekIncoming()), 10f, W - weekW, headerBottom + 9, weekW, true, BLACK, TextAlignment.CENTER);
 
         // ── 2. CODE ARTICLE (grand texte) ────────────────────────────────
-        float itemTextBottom = headerBottom - 22f;  // y ≈ 160
+        float itemTextBottom = headerBottom - 25f;
+        txt(doc, pageNumber, s(e.getItem()), 22f, 6, itemTextBottom, 200, true, BLACK, TextAlignment.LEFT);
 
-        txt(doc, pageNumber, s(e.getItem()), 20f, 6, itemTextBottom, 220, true, BLACK, TextAlignment.LEFT);
-
-        // ── 3. ZONE JAUNE (PLUS GRANDE) ───────────────────────────────
-        float yellowX      = 250f;  //
-        float yellowBottom = 70f;
+        // ── 3. ZONE JAUNE (Positionnée selon l'image 2) ──────────────────
+        float yellowX      = 200f;  // Commence plus à gauche pour être plus large
+        float yellowBottom = 95f;   // S'arrête plus haut pour laisser place au 2ème barcode
         float yellowTop    = headerBottom;
         cv.setFillColor(YELLOW).rectangle(yellowX, yellowBottom, W - yellowX - 2, yellowTop - yellowBottom).fill();
 
         // ── 4. BARCODE ARTICLE (côté gauche) ─────────────────────────────
-        float bcArticleTop = itemTextBottom - 2f;
-        float bcArticleH   = 38f;
-        float bcArticleW   = yellowX - 10f;
+        float bcArticleTop = itemTextBottom - 5f;
+        float bcArticleH   = 35f;
+        float bcArticleW   = yellowX - 15f; // S'arrête juste avant la zone jaune
 
         addBarcode(pdfDoc, cv, doc, pageNumber, s(e.getItem()), 6, bcArticleTop, bcArticleW, bcArticleH);
 
-        // ── 5. ZONE TEXTE INFOS ───────────────────────────────────────────
+        // ── 5. ZONE TEXTE INFOS (Alignée à gauche) ───────────────────────
         float infoY1 = 76f;
         float infoY2 = 62f;
         float infoY3 = 48f;
@@ -124,24 +123,23 @@ public class EtiquettePdfService {
         String desc = s(e.getDescription());
         if (desc.length() > 28) desc = desc.substring(0, 26) + "…";
 
-        txt(doc, pageNumber, "Desc: " + desc,              7.5f, 6,   infoY1, 160, false, BLACK, TextAlignment.LEFT);
-        txt(doc, pageNumber, "QTE : " + s(e.getQty()),     7.5f, 6,   infoY2, 100, true,  BLACK, TextAlignment.LEFT);
+        txt(doc, pageNumber, "Desc: " + desc,              7.5f, 6,   infoY1, 180, false, BLACK, TextAlignment.LEFT);
+        txt(doc, pageNumber, "QTE : " + s(e.getQty()),     8f,   6,   infoY2, 100, true,  BLACK, TextAlignment.LEFT);
         txt(doc, pageNumber, "RFr:" + s(e.getLinkedOrder()), 7.5f, 120, infoY2, 80, false, BLACK, TextAlignment.LEFT);
 
         txt(doc, pageNumber, "NC: " + s(e.getLocation()),  7.5f, 6,   infoY3, 90, false, BLACK, TextAlignment.LEFT);
         txt(doc, pageNumber, s(e.getMpnr()),               7.5f, 110, infoY3, 90, false, BLACK, TextAlignment.LEFT);
         txt(doc, pageNumber, "DATE: " + s(e.getDateLabel()), 7.5f, 6, 34f, 130, false, BLACK, TextAlignment.LEFT);
 
-        // ── 6. GRAND BARCODE LOT EN BAS À DROITE ─────────────────────────
+        // ── 6. GRAND BARCODE (Bas-Droit, aligné sous le jaune) ───────────
         if (!s(e.getLabelNumber()).isBlank()) {
-            float bigBcX   = 155f;
-            float bigBcTop = 30f;
-            float bigBcW   = W - bigBcX - 8f;
-            float bigBcH   = 28f;
+            float bigBcX   = 200f; // Aligné sur le début de la zone jaune
+            float bigBcTop = 55f;
+            float bigBcW   = W - bigBcX - 10f;
+            float bigBcH   = 32f;
             addBarcode(pdfDoc, cv, doc, pageNumber, s(e.getLabelNumber()), bigBcX, bigBcTop, bigBcW, bigBcH);
         }
     }
-
     private void addBarcode(PdfDocument pdfDoc, PdfCanvas cv, Document doc, int pageNumber,
                             String code, float x, float yTop, float maxW, float barH) {
         if (code == null || code.isBlank()) return;

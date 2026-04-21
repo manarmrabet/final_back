@@ -6,5 +6,4 @@ import java.util.Optional;
 
 public interface InventoryReportRepository extends JpaRepository<InventoryReport, Long> {
     Optional<InventoryReport> findBySessionId(Long sessionId);
-    boolean existsBySessionId(Long sessionId);
 }

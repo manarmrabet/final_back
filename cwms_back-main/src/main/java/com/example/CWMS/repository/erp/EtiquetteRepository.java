@@ -47,51 +47,59 @@ public class EtiquetteRepository {
         FROM dbo_twhinh312310 h
         LEFT JOIN dbo_twhltc100310 l 
                ON LTRIM(RTRIM(h.t_item)) = LTRIM(RTRIM(l.t_item)) 
-              AND ISNULL(h.t_clot, '') = ISNULL(l.t_clot, '')   -- Gestion des NULL
+              -- Sécurisation de la jointure lot (cast en varchar pour éviter les erreurs bigint)
+              AND ISNULL(LTRIM(RTRIM(CAST(h.t_clot AS VARCHAR(50)))), '') = ISNULL(LTRIM(RTRIM(CAST(l.t_clot AS VARCHAR(50)))), '')
         LEFT JOIN dbo_twhwmd400310 w 
                ON LTRIM(RTRIM(h.t_item)) = LTRIM(RTRIM(w.t_item))
 
         WHERE h.t_rcno = ?
           AND h.t_oorg = 80
 
-        ORDER BY TRY_CAST(h.t_rcln AS INT) ASC
+        -- Remplacement du TRY_CAST par une logique CASE plus robuste pour Spring/JDBC
+        ORDER BY CASE WHEN ISNUMERIC(h.t_rcln) = 1 THEN CAST(h.t_rcln AS INT) ELSE 0 END ASC
         """;
 
     private static final String SQL_MARK_PRINTED = """
         UPDATE dbo_twhltc100310
            SET t_sel1 = '1'
          WHERE t_item IN (SELECT DISTINCT t_item FROM dbo_twhinh312310 WHERE t_rcno = ? AND t_oorg = 80)
-           AND t_clot IN (SELECT DISTINCT ISNULL(t_clot, '') FROM dbo_twhinh312310 WHERE t_rcno = ? AND t_oorg = 80)
+           -- Utilisation du même CAST pour la mise à jour
+           AND LTRIM(RTRIM(CAST(t_clot AS VARCHAR(50)))) IN (SELECT DISTINCT LTRIM(RTRIM(CAST(t_clot AS VARCHAR(50)))) FROM dbo_twhinh312310 WHERE t_rcno = ? AND t_oorg = 80)
         """;
 
     public List<EtiquetteDTO> findByOrderNumber(String rcno) {
         log.info("[EtiquetteRepo] Exécution SELECT pour RCNO = '{}'", rcno);
 
-        List<EtiquetteDTO> result = erpJdbc.query(SQL_SELECT,
-                ps -> ps.setString(1, rcno),
-                (rs, row) -> {
-                    var dto = new EtiquetteDTO();
-                    dto.setRcno(rs.getString("t_rcno"));
-                    dto.setRcln(rs.getString("t_rcln"));
-                    dto.setSfbp(rs.getString("t_sfbp"));
-                    dto.setCompany(rs.getString("company"));
-                    dto.setRotationClass(rs.getString("rotation_class"));
-                    dto.setItem(rs.getString("item"));
-                    dto.setDescription(rs.getString("description"));
-                    dto.setValidityDate(rs.getString("validity_date"));
-                    dto.setQty(rs.getString("qty"));
-                    dto.setLabelNumber(rs.getString("label_number"));
-                    dto.setDateLabel(rs.getString("date_label"));
-                    dto.setLocation(rs.getString("location"));
-                    dto.setWeekIncoming(rs.getString("week_incoming"));
-                    dto.setMpnr(rs.getString("mpnr"));
-                    dto.setLinkedOrder(rs.getString("linked_order"));
-                    dto.setUnit(rs.getString("unit"));
-                    return dto;
-                });
+        try {
+            List<EtiquetteDTO> result = erpJdbc.query(SQL_SELECT,
+                    ps -> ps.setString(1, rcno),
+                    (rs, row) -> {
+                        var dto = new EtiquetteDTO();
+                        dto.setRcno(rs.getString("t_rcno"));
+                        dto.setRcln(rs.getString("t_rcln"));
+                        dto.setSfbp(rs.getString("t_sfbp"));
+                        dto.setCompany(rs.getString("company"));
+                        dto.setRotationClass(rs.getString("rotation_class"));
+                        dto.setItem(rs.getString("item"));
+                        dto.setDescription(rs.getString("description"));
+                        dto.setValidityDate(rs.getString("validity_date"));
+                        dto.setQty(rs.getString("qty"));
+                        dto.setLabelNumber(rs.getString("label_number"));
+                        dto.setDateLabel(rs.getString("date_label"));
+                        dto.setLocation(rs.getString("location"));
+                        dto.setWeekIncoming(rs.getString("week_incoming"));
+                        dto.setMpnr(rs.getString("mpnr"));
+                        dto.setLinkedOrder(rs.getString("linked_order"));
+                        dto.setUnit(rs.getString("unit"));
+                        return dto;
+                    });
 
-        log.info("[EtiquetteRepo] RCNO={} → {} ligne(s) trouvée(s)", rcno, result.size());
-        return result;
+            log.info("[EtiquetteRepo] RCNO={} → {} ligne(s) trouvée(s)", rcno, result.size());
+            return result;
+        } catch (Exception e) {
+            log.error("[EtiquetteRepo] Erreur lors de la récupération pour RCNO {}: {}", rcno, e.getMessage());
+            throw e;
+        }
     }
 
     public void markAsPrinted(String rcno) {
