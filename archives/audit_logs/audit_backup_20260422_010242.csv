@@ -1,0 +1,12 @@
+ID;CreatedAt;User;Action;Type;Severity;Endpoint;Status;OldValue;NewValue
+90732;2026-04-06T15:15:33.183070;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""
+90733;2026-04-06T15:16:31.680678;admin;MENU_CREATED;CREATE;INFO;null;null;"";"{'menuItemId':3011,'label':'reception','icon':'unlock','link':'/reception','parentId':null,'isTitle':true,'isLayout':true,'createdAt':'2026-04-06T15:16:31.6705618','updatedAt':'2026-04-06T15:16:31.6705618'}"
+90734;2026-04-06T15:16:38.954403;admin;MENU_SAVED;CREATE;INFO;null;null;"";""
+90735;2026-04-06T21:52:23.259191;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""
+90736;2026-04-06T23:32:08.375232;admin;DECONNEXION;LOGOUT;INFO;null;null;"";""
+90737;2026-04-06T23:32:14.894218;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""
+90738;2026-04-07T00:35:48.667637;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""
+90739;2026-04-07T00:42:44.489596;admin;MENU_DELETED;DELETE;INFO;null;null;"{'menuItemId':3010,'label':'hgtfr','icon':'list','link':'hygtre','parent':null,'isTitle':true,'isLayout':true,'createdAt':'2026-04-06T00:21:27.909905','updatedAt':'2026-04-06T00:21:27.909905','roleMappings':[{'roleMenuMappingId':4084,'createdAt':'2026-04-06T15:16:38.938016','updatedAt':'2026-04-06T15:16:38.938016'}]}";""
+90740;2026-04-07T00:43:22.694113;admin;MENU_UPDATED;UPDATE;INFO;null;null;"{'menuItemId':3009,'label':'cards','icon':'settings','link':'/card-management','parent':null,'isTitle':true,'isLayout':true,'createdAt':'2026-04-05T23:05:20.44673','updatedAt':'2026-04-05T23:05:20.44673','roleMappings':[{'roleMenuMappingId':4083,'createdAt':'2026-04-06T15:16:38.938016','updatedAt':'2026-04-06T15:16:38.938016'}]}";"{'menuItemId':3009,'label':'cards','icon':'settings','link':'/card-management','parentId':null,'isTitle':true,'isLayout':true,'createdAt':'2026-04-05T23:05:20.44673','updatedAt':'2026-04-05T23:05:20.44673'}"
+90741;2026-04-07T12:22:39.769421;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""
+90742;2026-04-07T17:09:21.110301;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""

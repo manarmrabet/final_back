@@ -8,12 +8,6 @@ import lombok.*;
  *
  * C'est la VRAIE table des emplacements WH Infor LN.
  * Clé naturelle : (t_cwar, t_loca).
- *
- * READ ONLY — CWMS ne modifie jamais cette table.
- *
- * ATTENTION : Ne pas confondre avec dbo_ttccom100120 (ErpEmplacement)
- * qui est la table des Business Partners / adresses, sans lien direct
- * avec les emplacements de stock.
  */
 @Entity
 @Table(name = "dbo_twhwmd300310")

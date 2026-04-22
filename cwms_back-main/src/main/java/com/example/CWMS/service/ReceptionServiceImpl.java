@@ -69,7 +69,7 @@ public class ReceptionServiceImpl implements ReceptionService {
                     "       AND pol.t_rcno IS NOT NULL AND pol.t_rcno <> '' " +
                     "LEFT  JOIN [ERP].[dbo].[dbo_ttccom100310]  sup " +
                     "       ON  sup.t_bpid = pol.t_sfbp " +
-                    "LEFT  JOIN [ERP].[dbo].[dbo_ttcibd001310]  itm " +
+                    "LEFT  JOIN [ERP].[dbo].[dbo_ttcibd001120]  itm " +
                     "       ON  itm.t_item = pol.t_item " +
                     "LEFT  JOIN [ERP].[dbo].[dbo_twhinr1401200] stk " +
                     "       ON  stk.t_cwar = ISNULL(rch.t_cwar, pol.t_cwar) " +

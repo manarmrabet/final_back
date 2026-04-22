@@ -4,19 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-
-/**
- * Entité ERP — Table dbo_ttccom100120
- * Représente les emplacements/magasins/zones dans l'ERP.
- * READ ONLY.
- *
- * Colonnes clés :
- *   t_bpid = code emplacement (PK)
- *   t_nama = nom / libellé
- *   t_clan = type/classe emplacement
- */
 @Entity
-@Table(name = "dbo_ttccom100120")
+@Table(name = "dbo_ttccom100310")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
