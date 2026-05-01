@@ -45,9 +45,7 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
-			<!-- ✅ Une seule fois -->
 		</dependency>
-
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -57,8 +55,9 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
-			<version>3.14.0</version>  <!-- ou la dernière version stable -->
+			<version>3.14.0</version>
 		</dependency>
+
 		<!-- ===== JWT ===== -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
@@ -78,8 +77,6 @@
 			<scope>runtime</scope>
 		</dependency>
 
-
-
 		<!-- ===== DATABASE ===== -->
 		<dependency>
 			<groupId>com.microsoft.sqlserver</groupId>
@@ -92,8 +89,6 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
-
-
 
 		<!-- ===== LOMBOK ===== -->
 		<dependency>
@@ -115,9 +110,7 @@
 			<scope>test</scope>
 		</dependency>
 
-
-
-		<!-- iText 7 for PDF -->
+		<!-- ===== PDF ===== -->
 		<dependency>
 			<groupId>com.itextpdf</groupId>
 			<artifactId>itext7-core</artifactId>
@@ -125,11 +118,48 @@
 			<type>pom</type>
 		</dependency>
 
-		<!-- Apache POI for Excel -->
+		<!-- ===== EXCEL ===== -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.2.3</version>
+		</dependency>
+
+		<!-- ===== REDIS ===== -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+
+		<!-- ===== SWAGGER / OpenAPI ===== -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.8.8</version>
+		</dependency>
+
+		<!-- ===== SPOTBUGS ANNOTATIONS ===== -->
+		<dependency>
+			<groupId>com.github.spotbugs</groupId>
+			<artifactId>spotbugs-annotations</artifactId>
+			<version>4.8.3</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-amqp</artifactId>
 		</dependency>
 
 
@@ -137,6 +167,8 @@
 
 	<build>
 		<plugins>
+
+			<!-- ===== SPRING BOOT ===== -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
@@ -150,6 +182,21 @@
 					</excludes>
 				</configuration>
 			</plugin>
+
+			<!-- ===== SPOTBUGS MAVEN ===== -->
+			<!-- ✅ AJOUT UNIQUEMENT — plugin d'analyse statique avec exclusions Lombok -->
+			<plugin>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-maven-plugin</artifactId>
+				<version>4.8.3.1</version>
+				<configuration>
+					<!-- Fichier d'exclusions à la racine du projet -->
+					<excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+					<effort>Max</effort>
+					<threshold>Low</threshold>
+				</configuration>
+			</plugin>
+
 		</plugins>
 	</build>
 

@@ -37,6 +37,14 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
+                        // ✅ SWAGGER UI — ajout uniquement, rien d'autre modifié
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml"
+                        ).permitAll()
+
                         // 1. Routes Publiques (Authentification)
                         .requestMatchers("/api/auth/**", "/auth/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -72,15 +80,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/mouvements/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER", "ROLE_RESPONSABLE_MAGASIN")
 
-
                         .requestMatchers("/api/etiquette/**")
-                        .hasAnyAuthority("ROLE_ADMIN","ROLE_MAGASINIER")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_MAGASINIER")
 
                         // PRODUCTION LOGS
                         .requestMatchers("/api/production/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN", "ROLE_MAGASINIER")
                         .requestMatchers("/api/inventory/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_RESPONSABLE_MAGASIN", "ROLE_MAGASINIER")
+
                         // 6. MENU ITEMS & AUDIT
                         .requestMatchers(HttpMethod.GET, "/api/menu-items/**").authenticated()
                         .requestMatchers("/api/menu-items/**").hasAuthority("ROLE_ADMIN")

@@ -47,10 +47,18 @@ public class InventoryReport {
     @Column(name = "generated_by")
     private String generatedBy;
 
-    // FIX : pas de @PrePersist — on set generatedAt manuellement dans le service
-    // pour permettre la mise à jour lors de la régénération
     @PrePersist
     protected void onCreate() {
         if (this.generatedAt == null) this.generatedAt = LocalDateTime.now();
+    }
+
+    // ✅ FIX SpotBugs — entité JPA liée par @OneToOne
+    // Hibernate gère le cycle de vie — on déclare explicitement les accesseurs
+    public void setSession(InventorySession session) {
+        this.session = session;
+    }
+
+    public InventorySession getSession() {
+        return session;
     }
 }

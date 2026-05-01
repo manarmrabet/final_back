@@ -3,6 +3,7 @@ package com.example.CWMS.model.cwms;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Entity
@@ -49,5 +50,14 @@ public class Role {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // ✅ FIX SpotBugs — getters protégés @OneToMany
+    public List<User> getUsers() {
+        return users == null ? null : Collections.unmodifiableList(users);
+    }
+
+    public List<RoleMenuMapping> getMenuMappings() {
+        return menuMappings == null ? null : Collections.unmodifiableList(menuMappings);
     }
 }

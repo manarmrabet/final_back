@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.List;
@@ -16,15 +17,14 @@ import java.util.stream.Collectors;
 @Component
 public class JwtUtils {
 
-    // ✅ Clé fixe depuis application.properties — ne change plus au redémarrage
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
-    private final int jwtExpirationMs = 86400000; // 24h
+    // ✅ FIX Performance — static final (constante de classe, pas d'instance)
+    private static final int JWT_EXPIRATION_MS = 86400000; // 24h
 
-    // ✅ Clé construite une seule fois depuis le secret fixe
     private Key getKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateJwtToken(Authentication authentication) {
@@ -38,7 +38,7 @@ public class JwtUtils {
                 .setSubject(userPrincipal.getUsername())
                 .claim("authorities", roles)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .setExpiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION_MS))
                 .signWith(getKey())
                 .compact();
     }

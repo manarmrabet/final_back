@@ -11,9 +11,11 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.InitialDirContext;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -108,6 +110,9 @@ public class EmailValidationServiceImpl implements EmailValidationService {
      *         Boolean.FALSE → adresse rejetée (550/551/553...)
      *         null          → serveur injoignable (timeout, port bloqué)
      */
+    // Dans EmailValidationServiceImpl.java
+// Aucune modification de logique — juste suppression du warning
+
     private Boolean trySmtpHandshake(String mxHost, String recipientEmail) {
         log.debug("Tentative SMTP sur {} pour {}", mxHost, recipientEmail);
 
@@ -116,14 +121,16 @@ public class EmailValidationServiceImpl implements EmailValidationService {
             socket.setSoTimeout(SMTP_TIMEOUT_MS);
 
             try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(socket.getInputStream()));
-                 PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
+                    new InputStreamReader(socket.getInputStream(),
+                            StandardCharsets.UTF_8));          // ✅ FIX Internationalization
+                 PrintWriter writer = new PrintWriter(
+                         new OutputStreamWriter(socket.getOutputStream(),
+                                 StandardCharsets.UTF_8), true)) { // ✅ FIX Internationalization
 
-                // Lire la bannière de bienvenue (220 ...)
                 String banner = reader.readLine();
                 if (banner == null || !banner.startsWith("220")) {
                     log.warn("Bannière SMTP invalide sur {} : {}", mxHost, banner);
-                    return null;
+                    return null; // ✅ null intentionnel — serveur injoignable
                 }
 
                 writer.println("EHLO cwms-check.com");
@@ -134,22 +141,18 @@ public class EmailValidationServiceImpl implements EmailValidationService {
                 String mailFromResponse = readSmtpResponse(reader);
                 if (!mailFromResponse.startsWith("2")) return null;
 
-                // RCPT TO — c'est ici qu'on sait si l'adresse existe
                 writer.println("RCPT TO:<" + recipientEmail + ">");
                 String rcptResponse = readSmtpResponse(reader);
 
                 writer.println("QUIT");
 
-                log.info("Réponse RCPT TO pour {} sur {} : {}", recipientEmail, mxHost, rcptResponse);
+                log.info("Réponse RCPT TO pour {} sur {} : {}",
+                        recipientEmail, mxHost, rcptResponse);
 
                 if (rcptResponse.startsWith("2")) return Boolean.TRUE;
-
-                // Codes 550, 551, 553 → utilisateur inconnu
                 if (rcptResponse.startsWith("55") || rcptResponse.startsWith("5.1")) {
                     return Boolean.FALSE;
                 }
-
-                // Codes 4xx (erreur temporaire) → on laisse passer
                 return Boolean.TRUE;
             }
 
@@ -157,7 +160,7 @@ public class EmailValidationServiceImpl implements EmailValidationService {
             log.warn("Timeout SMTP sur {} après {}ms", mxHost, SMTP_TIMEOUT_MS);
             return null;
         } catch (java.net.ConnectException e) {
-            log.warn("Connexion refusée sur {}:{} — port 25 probablement bloqué", mxHost, SMTP_PORT);
+            log.warn("Connexion refusée sur {}:{}", mxHost, SMTP_PORT);
             return null;
         } catch (Exception e) {
             log.warn("Erreur SMTP inattendue sur {} : {}", mxHost, e.getMessage());

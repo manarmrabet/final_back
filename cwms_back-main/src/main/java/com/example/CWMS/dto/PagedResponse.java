@@ -1,32 +1,17 @@
 package com.example.CWMS.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.data.domain.Page;
+import java.util.Collections;
+import java.util.List;
 
-/**
- * DTO de pagination — wrapper autour de Page<T> Spring.
- *
- * FIX : Le Page<T> Spring ne se sérialise pas bien par défaut en JSON
- * (il expose beaucoup de champs internes inutiles et peut causer des erreurs
- * de désérialisation côté Angular).
- *
- * Ce record produit exactement :
- * {
- *   "content":       [...],
- *   "page":          0,
- *   "size":          20,
- *   "totalElements": 42,
- *   "totalPages":    3,
- *   "first":         true,
- *   "last":          false
- * }
- *
- * Côté Angular, PagedResponse<T> est typé avec exactement ces champs.
- */
+
+
 public record PagedResponse<T>(
 
         @JsonProperty("content")
-        java.util.List<T> content,
+        List<T> content,
 
         @JsonProperty("page")
         int page,
@@ -47,10 +32,12 @@ public record PagedResponse<T>(
         boolean last
 
 ) {
-    /**
-     * Factory method — convertit un Page<T> Spring en PagedResponse<T>.
-     * Utilisé dans le controller : PagedResponse.of(page)
-     */
+    // ✅ FIX SpotBugs — constructeur compact protège content
+    public PagedResponse {
+        content = content == null ? null
+                : Collections.unmodifiableList(content);
+    }
+
     public static <T> PagedResponse<T> of(Page<T> page) {
         return new PagedResponse<>(
                 page.getContent(),

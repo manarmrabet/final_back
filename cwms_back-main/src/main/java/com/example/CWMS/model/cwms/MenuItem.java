@@ -2,14 +2,12 @@ package com.example.CWMS.model.cwms;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Entity
 @Table(name = "MenuItems")
-// ✅ MODIFICATION : On remplace @Data par les annotations séparées
-// pour éviter le conflit Lombok sur les champs booléens préfixés "is"
 @Getter
 @Setter
 @NoArgsConstructor
@@ -36,9 +34,6 @@ public class MenuItem {
     @JoinColumn(name = "ParentId")
     private MenuItem parent;
 
-    // ✅ MODIFICATION : boolean primitif → Boolean objet (wrapper)
-    // Cela force Lombok à générer getIsTitle()/setIsTitle()
-    // au lieu de isTitle()/setTitle() (convention JavaBean primitif)
     @Column(name = "IsTitle")
     private Boolean isTitle;
 
@@ -56,7 +51,6 @@ public class MenuItem {
 
     @PrePersist
     protected void onCreate() {
-        // ✅ MODIFICATION : initialisation des flags à false si null à la création
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         if (this.isTitle == null)  this.isTitle  = false;
@@ -68,9 +62,10 @@ public class MenuItem {
         updatedAt = LocalDateTime.now();
     }
 
-    // ✅ MODIFICATION : Suppressions des getters/setters manuels
-    // Lombok (@Getter/@Setter) les génère maintenant correctement :
-    // - getIsTitle() / setIsTitle(Boolean)
-    // - getIsLayout() / setIsLayout(Boolean)
-    // grâce au type Boolean (wrapper) et non boolean (primitif)
+    // ✅ FIX SpotBugs — getter protégé pour @OneToMany
+    // Hibernate gère sa propre collection en interne — unmodifiableList()
+    // empêche uniquement la modification externe accidentelle
+    public List<RoleMenuMapping> getRoleMappings() {
+        return roleMappings == null ? null : Collections.unmodifiableList(roleMappings);
+    }
 }

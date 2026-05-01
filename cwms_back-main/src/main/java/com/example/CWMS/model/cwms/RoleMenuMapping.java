@@ -18,11 +18,11 @@ public class RoleMenuMapping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "RoleMenuMappingId")
     private Integer roleMenuMappingId;
+
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "RoleId", nullable = false)
     private Role role;
-
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
@@ -45,4 +45,12 @@ public class RoleMenuMapping {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    // ✅ FIX SpotBugs — entités JPA liées par @ManyToOne
+    // Hibernate gère le cycle de vie — accesseurs explicites sans copie
+    public void setRole(Role role) { this.role = role; }
+    public Role getRole()          { return role; }
+
+    public void setMenuItem(MenuItem menuItem) { this.menuItem = menuItem; }
+    public MenuItem getMenuItem()              { return menuItem; }
 }

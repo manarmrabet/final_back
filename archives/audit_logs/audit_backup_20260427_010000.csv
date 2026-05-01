@@ -1,0 +1,2 @@
+ID;CreatedAt;User;Action;Type;Severity;Endpoint;Status;OldValue;NewValue
+1185;2026-04-12T23:30:47.503614900;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""

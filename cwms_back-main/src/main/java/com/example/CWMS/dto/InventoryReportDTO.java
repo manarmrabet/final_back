@@ -2,6 +2,7 @@ package com.example.CWMS.dto;
 
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -13,10 +14,7 @@ public class InventoryReportDTO {
     private Long sessionId;
     private String sessionName;
     private String warehouseCode;
-
-    /** Zone ERP de la session (peut être null) */
     private String warehouseZone;
-
     private int totalErp;
     private int totalCollecte;
     private int totalConforme;
@@ -25,4 +23,9 @@ public class InventoryReportDTO {
     private int totalSurplus;
     private LocalDateTime generatedAt;
     private List<ReportLineDTO> lines;
+
+    // ✅ FIX SpotBugs — protection de la représentation interne
+    public List<ReportLineDTO> getLines() {
+        return lines == null ? null : Collections.unmodifiableList(lines);
+    }
 }

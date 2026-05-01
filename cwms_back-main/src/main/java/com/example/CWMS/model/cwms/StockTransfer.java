@@ -4,13 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
-/**
- * Entité CWMSDB — Table stock_transfers
- *
- * CORRECTION : status et transferType sont maintenant des enums Java (@Enumerated).
- * JPA stocke le nom en String ("DONE", "PENDING"...) mais le code est typé —
- * impossible de mettre une valeur invalide en base par erreur.
- */
 @Entity
 @Table(name = "stock_transfers")
 @Data
@@ -23,7 +16,6 @@ public class StockTransfer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Article
     @Column(name = "erp_item_code", nullable = false, length = 50)
     private String erpItemCode;
 
@@ -33,7 +25,6 @@ public class StockTransfer {
     @Column(name = "lot_number", length = 50)
     private String lotNumber;
 
-    // Emplacements
     @Column(name = "source_location", nullable = false, length = 50)
     private String sourceLocation;
 
@@ -46,14 +37,12 @@ public class StockTransfer {
     @Column(name = "dest_warehouse", length = 50)
     private String destWarehouse;
 
-    // Quantité
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
     @Column(name = "unit", length = 20)
     private String unit;
 
-    // ✅ CORRECTION : enums typés au lieu de String libres
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     @Builder.Default
@@ -64,7 +53,6 @@ public class StockTransfer {
     @Builder.Default
     private TransferType transferType = TransferType.INTERNAL_RELOCATION;
 
-    // Acteurs
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "operator_id")
     private User operator;
@@ -73,7 +61,6 @@ public class StockTransfer {
     @JoinColumn(name = "validated_by")
     private User validatedBy;
 
-    // Dates
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -83,7 +70,6 @@ public class StockTransfer {
     @Column(name = "validated_at")
     private LocalDateTime validatedAt;
 
-    // Métadonnées
     @Column(name = "notes", length = 500)
     private String notes;
 
@@ -97,7 +83,25 @@ public class StockTransfer {
         if (transferType == null) transferType = TransferType.INTERNAL_RELOCATION;
     }
 
-    // ─── Enums ────────────────────────────────────────────────────────────────
+    // ✅ FIX SpotBugs — entités JPA @ManyToOne
+    // Hibernate gère le cycle de vie — accesseurs explicites sans copie
+    public void setOperator(User operator) {
+        this.operator = operator;
+    }
+
+    public User getOperator() {
+        return operator;
+    }
+
+    public void setValidatedBy(User validatedBy) {
+        this.validatedBy = validatedBy;
+    }
+
+    public User getValidatedBy() {
+        return validatedBy;
+    }
+
+    // ─── Enums ───────────────────────────────────────────────────────────────
 
     public enum TransferStatus {
         PENDING, DONE, ERROR, CANCELLED

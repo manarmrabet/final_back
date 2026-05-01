@@ -8,8 +8,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -52,7 +55,11 @@ public class AuditArchiveService {
             String fileName = ARCHIVE_DIR + "audit_backup_" + timestamp + ".csv";
 
             // 3. Écriture du CSV
-            try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
+            // ✅ APRÈS — encodage UTF-8 explicite
+            try (PrintWriter writer = new PrintWriter(
+                    new OutputStreamWriter(
+                            new FileOutputStream(fileName),
+                            StandardCharsets.UTF_8))) {
                 // Header CSV
                 writer.println("ID;CreatedAt;User;Action;Type;Severity;Endpoint;Status;OldValue;NewValue");
 

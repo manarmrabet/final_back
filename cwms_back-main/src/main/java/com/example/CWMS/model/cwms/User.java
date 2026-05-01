@@ -3,7 +3,6 @@ package com.example.CWMS.model.cwms;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -32,16 +31,14 @@ public class User {
     @Column(name = "LastName", length = 100)
     private String lastName;
 
-
     @JsonIgnore
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "RoleId")
     private Role role;
 
-
     @JsonIgnore
     @ManyToOne
-    @JoinColumn(name = "IdSite") //
+    @JoinColumn(name = "IdSite")
     private Site site;
 
     @Column(name = "IsActive")
@@ -64,6 +61,7 @@ public class User {
 
     @Column(name = "lock_time")
     private LocalDateTime lockTime;
+
     public boolean isAccountLocked() {
         return !this.accountNonLocked;
     }
@@ -80,9 +78,31 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
 
-    @Column(name = "must_change_password", nullable = false, columnDefinition = "boolean default true")
+    @Column(name = "must_change_password",
+            nullable = false,
+            columnDefinition = "boolean default true")
     private boolean mustChangePassword = true;
 
-    @Column(name = "credentials_sent", nullable = false, columnDefinition = "boolean default false")
+    @Column(name = "credentials_sent",
+            nullable = false,
+            columnDefinition = "boolean default false")
     private boolean credentialsSent = false;
+
+    // ✅ FIX SpotBugs — entités JPA @ManyToOne
+    // Hibernate gère le cycle de vie — accesseurs explicites sans copie
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setSite(Site site) {
+        this.site = site;
+    }
+
+    public Site getSite() {
+        return site;
+    }
 }

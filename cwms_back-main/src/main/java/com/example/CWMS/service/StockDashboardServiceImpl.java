@@ -23,7 +23,7 @@ public class StockDashboardServiceImpl implements StockDashboardService {
     private final ErpConsultationServiceImpl consultationService;
 
 
-  //calcule les statistiques par entrepôt, par catégorie et le Top 10 des articles/emplacements
+    //calcule les statistiques par entrepôt, par catégorie et le Top 10 des articles/emplacements
     @Override
     @Transactional(transactionManager = "erpTransactionManager", readOnly = true)
     public Map<String, Object> getDashboardData() {

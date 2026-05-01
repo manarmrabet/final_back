@@ -17,33 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * Service de gestion des sorties production.
- *
- * BONNE PRATIQUE — principes appliqués :
- *
- * 1. SÉPARATION DES RESPONSABILITÉS
- *    → readLot()            : lecture seule, retourne un POJO typé
- *    → resolveMagasin()     : résolution ERP, retourne un contexte typé
- *    → executeErpOperations(): 4 opérations ERP atomiques
- *    → saveAndReturn()      : construction réponse + log garanti
- *    → saveLogDirect()      : traçabilité, ne lève jamais d'exception
- *
- * 2. TRAÇABILITÉ GARANTIE
- *    → saveLogDirect() est appelé sur TOUS les chemins (succès ET erreur)
- *    → entouré d'un try/catch : le log ne peut jamais bloquer la réponse
- *    → status FAILED tracé pour : lot introuvable, stock vide,
- *      qty invalide, magasin introuvable, erreur ERP
- *
- * 3. @TRANSACTIONAL sur les méthodes de sortie
- *    → si une étape ERP échoue → rollback automatique des INSERT/UPDATE
- *    → le log CWMS reste sauvegardé (base séparée, hors transaction ERP)
- *
- * 4. AUCUN ACCÈS PAR INDEX sur les Object[]
- *    → LotProjection pour findLotWithDesignation (accès par nom)
- *    → Object[] uniquement pour getMagasinsData3001/3002 avec
- *      vérification défensive de r.length avant tout accès
- */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -56,7 +29,7 @@ public class ProductionServiceImpl implements IProductionService {
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
     // ════════════════════════════════════════════════════════════════════════
-    //  CHECK STOCK — lecture seule, pas de @Transactional
+    //  CHECK STOCK
     // ════════════════════════════════════════════════════════════════════════
     @Override
     public StockCheckDTO checkStock(String clot) {
@@ -84,8 +57,6 @@ public class ProductionServiceImpl implements IProductionService {
 
     // ════════════════════════════════════════════════════════════════════════
     //  SORTIE TOTALE
-    //  @Transactional : rollback ERP si une étape échoue
-    //  Log CWMS : sauvegardé dans tous les cas via saveAndReturn()
     // ════════════════════════════════════════════════════════════════════════
     @Override
     @Transactional
@@ -95,7 +66,6 @@ public class ProductionServiceImpl implements IProductionService {
         resp.setLotCode(req.getLotCode());
         resp.setOperationType("TOTALE");
 
-        // 1. Lire le lot (projection — sans risque d'index out of bounds)
         LotSnapshot snap = readLot(req.getLotCode());
         if (snap == null)
             return saveAndReturn(resp, req, userId, userName,
@@ -107,7 +77,6 @@ public class ProductionServiceImpl implements IProductionService {
                     "Stock déjà vide",
                     snap.qty, snap.qty, false);
 
-        // 2. Résoudre le magasin (inclut désormais cwar='04')
         MagasinContext ctx = resolveMagasin(snap.cwar, req.getLotCode());
         if (ctx == null)
             return saveAndReturn(resp, req, userId, userName,
@@ -115,14 +84,11 @@ public class ProductionServiceImpl implements IProductionService {
                             + " — vérifiez dbo_ttcmcs003140",
                     snap.qty, snap.qty, false);
 
-        // 3-6. INSERT twhinh220140 + twhinp100140
-        //      UPDATE ttcibd100140 + twhwmd215140
         String err = executeErpOperations(ctx, snap, snap.qty, req.getLotCode());
         if (err != null)
             return saveAndReturn(resp, req, userId, userName,
                     err, snap.qty, snap.qty, false);
 
-        // 7. Vider le stock (t_qhnd → 0)
         stockLotRepo.sortieTotale(req.getLotCode());
 
         return saveAndReturn(resp, req, userId, userName,
@@ -131,7 +97,6 @@ public class ProductionServiceImpl implements IProductionService {
 
     // ════════════════════════════════════════════════════════════════════════
     //  SORTIE PARTIELLE
-    //  Identique à la totale mais avec qty < stock (strictement inférieur)
     // ════════════════════════════════════════════════════════════════════════
     @Override
     @Transactional
@@ -141,7 +106,6 @@ public class ProductionServiceImpl implements IProductionService {
         resp.setLotCode(req.getLotCode());
         resp.setOperationType("PARTIELLE");
 
-        // Validation quantité — log tracé même ici
         if (req.getQuantite() == null || req.getQuantite() <= 0) {
             resp.setSuccess(false);
             resp.setMessage("Quantité invalide");
@@ -153,14 +117,12 @@ public class ProductionServiceImpl implements IProductionService {
         }
         double qty = req.getQuantite();
 
-        // 1. Lire le lot
         LotSnapshot snap = readLot(req.getLotCode());
         if (snap == null)
             return saveAndReturn(resp, req, userId, userName,
                     "Lot introuvable : " + req.getLotCode(),
                     0, 0, false);
 
-        // 2. Contrôle qty < stock (côté backend — même si Flutter vérifie déjà)
         if (qty >= snap.qty) {
             resp.setSuccess(false);
             resp.setMessage(String.format(
@@ -175,7 +137,6 @@ public class ProductionServiceImpl implements IProductionService {
             return resp;
         }
 
-        // 3. Résoudre le magasin
         MagasinContext ctx = resolveMagasin(snap.cwar, req.getLotCode());
         if (ctx == null)
             return saveAndReturn(resp, req, userId, userName,
@@ -183,13 +144,11 @@ public class ProductionServiceImpl implements IProductionService {
                             + " — vérifiez dbo_ttcmcs003140",
                     snap.qty, snap.qty, false);
 
-        // 4-7. Opérations ERP
         String err = executeErpOperations(ctx, snap, qty, req.getLotCode());
         if (err != null)
             return saveAndReturn(resp, req, userId, userName,
                     err, snap.qty, snap.qty, false);
 
-        // 8. Décrémenter t_qhnd
         stockLotRepo.sortiePartielle(req.getLotCode(), qty);
 
         return saveAndReturn(resp, req, userId, userName,
@@ -239,46 +198,25 @@ public class ProductionServiceImpl implements IProductionService {
     //  HELPERS PRIVÉS
     // ════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Lit le lot et retourne un POJO typé (LotSnapshot).
-     *
-     * BONNE PRATIQUE : retourne un objet métier (LotSnapshot) et non
-     * un Object[] ou une LotProjection directement. Le reste du service
-     * ne dépend pas des détails de la couche de persistance.
-     *
-     * Retourne null si lot introuvable → le appelant décide quoi faire.
-     */
     private LotSnapshot readLot(String clot) {
         Optional<LotProjection> raw = stockLotRepo.findLotWithDesignation(clot);
         if (raw.isEmpty()) return null;
 
         LotProjection r = raw.get();
 
-        // Log de diagnostic si une colonne clé est null
         if (r.getT_item() == null)
             log.warn("findLotWithDesignation({}) : t_item est NULL "
                     + "— vérifiez dbo_twhinr1401200", clot);
 
         LotSnapshot s = new LotSnapshot();
         s.cwar = proj(r.getT_cwar());
-        s.loca = proj(r.getT_loca());
         s.item = proj(r.getT_item());
-        s.clot = proj(r.getT_clot());
+        // ✅ FIX Performance — loca et clot supprimés car jamais lus après assignation
         s.qty  = r.getQty() != null ? r.getQty() : 0.0;
-        s.orun = "UN"; // unité fixe ERP
+        s.orun = "UN";
         return s;
     }
 
-    /**
-     * Résout le magasin ERP pour un cwar donné.
-     *
-     * BONNE PRATIQUE : vérification défensive de r.length avant
-     * tout accès à un index — même avec des alias garantis,
-     * une requête vide ou un driver différent peut retourner
-     * moins de colonnes que prévu.
-     *
-     * Loggue les cas problématiques pour faciliter le diagnostic.
-     */
     private MagasinContext resolveMagasin(String cwar, String clot) {
         List<Object[]> mag3001 = stockLotRepo.getMagasinsData3001();
 
@@ -289,14 +227,12 @@ public class ProductionServiceImpl implements IProductionService {
             return null;
         }
 
-        // Chercher la ligne dont col0 (t_cwar) = cwar du lot
         Object[] magasin = mag3001.stream()
                 .filter(r -> r.length > 0 && cwar.equals(safe(r[0])))
                 .findFirst()
                 .orElse(null);
 
         if (magasin == null) {
-            // Log détaillé pour le diagnostic
             String cwarsDispos = mag3001.stream()
                     .filter(r -> r.length > 0 && r[0] != null)
                     .map(r -> r[0].toString().trim())
@@ -308,7 +244,6 @@ public class ProductionServiceImpl implements IProductionService {
             return null;
         }
 
-        // Vérification défensive avant accès aux index
         if (magasin.length < 5) {
             log.error("getMagasinsData3001() : ligne avec {} colonnes "
                             + "au lieu de 7 attendues. Row={}",
@@ -316,12 +251,10 @@ public class ProductionServiceImpl implements IProductionService {
             return null;
         }
 
-        // col0=cwar, col1=ose, col2=oset, col3=orno, col4=comp
         String orno = safe(magasin[3]);
         int    oset = magasin[2] != null ? ((Number) magasin[2]).intValue() : 1;
         String comp = safe(magasin[4]);
 
-        // Vérifier que le lot est bien dans ce magasin
         List<Object[]> mag3002 = stockLotRepo.getMagasinsData3002(
                 cwar, oset, orno, clot);
 
@@ -335,23 +268,12 @@ public class ProductionServiceImpl implements IProductionService {
         MagasinContext ctx = new MagasinContext();
         ctx.orno = orno;
         ctx.comp = comp;
-        // oset de mag3002 col1 — fallback sur oset de mag3001
         ctx.oset = (mag3002.get(0).length > 1 && mag3002.get(0)[1] != null)
                 ? ((Number) mag3002.get(0)[1]).intValue()
                 : oset;
         return ctx;
     }
 
-    /**
-     * Exécute les 4 opérations ERP dans la même transaction.
-     *
-     * BONNE PRATIQUE : entouré d'un try/catch pour transformer
-     * toute exception SQL en message lisible → le service peut
-     * tracer un log FAILED et retourner une réponse propre
-     * au lieu d'une stack trace brute.
-     *
-     * Retourne null si tout est OK, message d'erreur sinon.
-     */
     private String executeErpOperations(MagasinContext ctx,
                                         LotSnapshot snap,
                                         double qty,
@@ -359,9 +281,6 @@ public class ProductionServiceImpl implements IProductionService {
         try {
             int newPono = stockLotRepo.getMaxPono(ctx.orno) + 1;
 
-
-
-            // Garde : vérifier qu'aucun ordre actif n'existe déjà
             int ordresActifs = stockLotRepo.countOrdresActifs(ctx.orno);
             if (ordresActifs > 0) {
                 log.warn("executeErpOperations : ordre actif (ssts 30/70/90) "
@@ -370,7 +289,6 @@ public class ProductionServiceImpl implements IProductionService {
                         + "(statut actif dans LN). Attendez sa complétion.";
             }
 
-            // INSERT ordre de sortie
             int ins1 = stockLotRepo.insertOrdreWhinh220(
                     ctx.orno, newPono, ctx.oset,
                     snap.cwar, ctx.comp, snap.item,
@@ -382,15 +300,13 @@ public class ProductionServiceImpl implements IProductionService {
                 return "INSERT dbo_twhinh220140 échoué (0 ligne affectée)";
             }
 
-            // INSERT ligne picking
             stockLotRepo.insertLigneWhinp100(
                     ctx.orno, newPono, snap.item, snap.orun, qty, snap.cwar);
 
-            // UPDATE allocations
             stockLotRepo.updateAlloArticle(snap.item, qty);
             stockLotRepo.updateAlloEmplacement(snap.item, snap.cwar, qty);
 
-            return null; // succès
+            return null;
 
         } catch (Exception e) {
             log.error("executeErpOperations : erreur pour clot={} : {}",
@@ -399,13 +315,6 @@ public class ProductionServiceImpl implements IProductionService {
         }
     }
 
-    /**
-     * Construit la réponse ET sauvegarde le log CWMS.
-     *
-     * BONNE PRATIQUE : appelé sur TOUS les chemins de sortie
-     * (succès ET chaque type d'erreur) → traçabilité complète garantie.
-     * Le log est sauvegardé avant de retourner la réponse.
-     */
     private SortieResponseDTO saveAndReturn(SortieResponseDTO resp,
                                             SortieRequestDTO req,
                                             Long userId, String userName,
@@ -437,17 +346,6 @@ public class ProductionServiceImpl implements IProductionService {
         return resp;
     }
 
-    /**
-     * Sauvegarde le log dans ProductionLog (base CWMS — séparée de l'ERP).
-     *
-     * BONNE PRATIQUE :
-     * → try/catch global : une erreur de log ne doit JAMAIS
-     *   bloquer ni faire planter la réponse principale
-     * → Utilise LotProjection pour relire les infos du lot :
-     *   accès sécurisé par nom, pas par index
-     * → Nommé saveLogDirect (pas saveLog) pour éviter toute
-     *   confusion avec les méthodes de logging SLF4J
-     */
     private ProductionLog saveLogDirect(SortieRequestDTO req,
                                         Long userId, String userName,
                                         double qtyBefore, double qtyRequested,
@@ -520,21 +418,17 @@ public class ProductionServiceImpl implements IProductionService {
         return dto;
     }
 
-    // ── Utilitaires ──────────────────────────────────────────────────────────
-
-    /** Sécurise une String issue d'une LotProjection. */
     private String proj(String s) {
         return s != null ? s.trim() : "N/A";
     }
 
-    /** Sécurise un Object brut (uniquement pour getMagasinsData3001/3002). */
     private String safe(Object o) {
         return o != null ? o.toString().trim() : "N/A";
     }
 
-    // ── POJOs internes — isolation de la couche de persistance ───────────────
+    // ✅ FIX Performance — loca et clot supprimés (champs jamais lus)
     private static class LotSnapshot {
-        String cwar, loca, item, clot, orun;
+        String cwar, item, orun;
         double qty;
     }
 

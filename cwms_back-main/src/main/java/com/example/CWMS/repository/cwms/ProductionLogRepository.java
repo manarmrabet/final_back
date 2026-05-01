@@ -4,6 +4,8 @@ import com.example.CWMS.model.cwms.ProductionLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -44,4 +46,11 @@ public interface ProductionLogRepository extends JpaRepository<ProductionLog, Lo
                     "GROUP BY user_id, user_name ORDER BY nb_ops DESC",
             nativeQuery = true)
     List<Object[]> getOperatorStats();
+
+
+
+    // ══ AJOUTS POUR LE MODULE ML ════════════════════════════════════════════
+
+
+    List<ProductionLog> findTop50ByCreatedAtAfterOrderByCreatedAtDesc(LocalDateTime since);
 }

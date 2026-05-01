@@ -1,69 +1,75 @@
 package com.example.CWMS.dto;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.*;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-/**
- * DTO Dashboard Transferts — affiché sur la page web et le dashboard principal.
- *
- * Statistiques incluses :
- *  - countByStatus      : comptage par statut (PENDING/DONE/ERROR/CANCELLED)
- *  - totalToday         : nombre de transferts aujourd'hui
- *  - totalThisWeek      : nombre de transferts cette semaine
- *  - totalThisMonth     : nombre de transferts ce mois
- *  - topItems           : top 5 articles les plus mouvementés (7 jours)
- *  - topOperators       : top 3 opérateurs les plus actifs (7 jours)
- *  - topSourceLocations : top 3 emplacements sources les plus utilisés
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+
+
 public class TransferDashboardDTO {
 
-    /** Nombre par statut : {PENDING: 5, DONE: 42, ERROR: 1, CANCELLED: 0} */
     private Map<String, Long> countByStatus;
-
-    /** Transferts aujourd'hui */
     private long totalToday;
-
-    /** Transferts cette semaine (7 jours glissants) */
     private long totalThisWeek;
-
-    /** Transferts ce mois */
     private long totalThisMonth;
-
-    /** Top 5 articles  plus transférés */
     private List<TopItemDTO> topItems;
-
-    /** Top 3 opérateurs les plus actifs */
     private List<TopOperatorDTO> topOperators;
-
-    /** Top 3 emplacements sources */
     private List<TopLocationDTO> topSourceLocations;
 
-    // ─── Inner classes ────────────────────────────────────────────────────
+    // ✅ FIX SpotBugs — setters avec copie défensive
+    public void setCountByStatus(Map<String, Long> countByStatus) {
+        this.countByStatus = countByStatus == null ? null : new HashMap<>(countByStatus);
+    }
 
-    @Data
-    @AllArgsConstructor
+    public void setTopItems(List<TopItemDTO> topItems) {
+        this.topItems = topItems == null ? null : new ArrayList<>(topItems);
+    }
+
+    public void setTopOperators(List<TopOperatorDTO> topOperators) {
+        this.topOperators = topOperators == null ? null : new ArrayList<>(topOperators);
+    }
+
+    public void setTopSourceLocations(List<TopLocationDTO> topSourceLocations) {
+        this.topSourceLocations = topSourceLocations == null ? null : new ArrayList<>(topSourceLocations);
+    }
+
+    // ✅ FIX SpotBugs — getters protégés
+    public Map<String, Long> getCountByStatus() {
+        return countByStatus == null ? null : Collections.unmodifiableMap(countByStatus);
+    }
+
+    public List<TopItemDTO> getTopItems() {
+        return topItems == null ? null : Collections.unmodifiableList(topItems);
+    }
+
+    public List<TopOperatorDTO> getTopOperators() {
+        return topOperators == null ? null : Collections.unmodifiableList(topOperators);
+    }
+
+    public List<TopLocationDTO> getTopSourceLocations() {
+        return topSourceLocations == null ? null : Collections.unmodifiableList(topSourceLocations);
+    }
+
+    @Data @AllArgsConstructor
     public static class TopItemDTO {
         private String itemCode;
         private String itemLabel;
-        private long   count;
+        private long count;
     }
 
-    @Data
-    @AllArgsConstructor
+    @Data @AllArgsConstructor
     public static class TopOperatorDTO {
         private String operatorName;
-        private long   count;
+        private long count;
     }
 
-    @Data
-    @AllArgsConstructor
+    @Data @AllArgsConstructor
     public static class TopLocationDTO {
         private String location;
-        private long   count;
+        private long count;
     }
 }

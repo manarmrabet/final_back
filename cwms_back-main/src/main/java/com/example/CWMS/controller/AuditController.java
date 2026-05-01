@@ -9,11 +9,8 @@ import com.example.CWMS.model.cwms.User;
 import com.example.CWMS.repository.cwms.AuditLogRepository;
 import com.example.CWMS.repository.cwms.UserRepository;
 import lombok.RequiredArgsConstructor;
-
-// ✅ ON UTILISE LE RESOURCE DE SPRING, PAS CELUI DE JAKARTA
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -22,20 +19,19 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
-
-
-
-import java.util.Comparator;
-import java.time.format.DateTimeFormatter;
 @RestController
 @RequestMapping("/api/audit")
 @RequiredArgsConstructor
@@ -45,7 +41,6 @@ public class AuditController {
     private final UserRepository     userRepository;
     private static final String ARCHIVE_DIR = "archives/audit_logs/";
 
-//Permet de filtrer par type (LOGIN, UPDATE, etc.), par sévérité ou par date
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AuditLogDTO>>> search(
             @RequestParam(required = false) String    eventType,
@@ -60,7 +55,7 @@ public class AuditController {
         EventType et  = (eventType != null && !eventType.isEmpty())
                 ? EventType.valueOf(eventType) : null;
         Severity  sev = (severity  != null && !severity.isEmpty())
-                ? Severity.valueOf(severity)   : null;
+                ? Severity.valueOf(severity) : null;
 
         return ResponseEntity.ok(ApiResponse.success(
                 auditLogRepository.search(et, sev, userId, from, to, pageable)
@@ -68,20 +63,19 @@ public class AuditController {
         ));
     }
 
-//Affiche l'historique complet d'un employé spécifique
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse<Page<AuditLogDTO>>> getByUser(
             @PathVariable Integer userId, Pageable pageable) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé: " + userId));
+                .orElseThrow(() -> new RuntimeException(
+                        "Utilisateur non trouvé: " + userId));
 
         return ResponseEntity.ok(ApiResponse.success(
                 auditLogRepository.findByUser(user, pageable).map(AuditLogDTO::from)
         ));
     }
 
-    //Affiche uniquement les entrées/sorties (le "pointage" numérique) d'un utilisateur
     @GetMapping("/user/{userId}/connections")
     public ResponseEntity<ApiResponse<List<AuditLogDTO>>> getConnections(
             @PathVariable Integer userId) {
@@ -94,9 +88,6 @@ public class AuditController {
         ));
     }
 
-
-    //Liste les fichiers CSV disponibles sur le serveur
-    // Remplace l'ancienne méthode listArchives()
     @GetMapping("/archives")
     public ResponseEntity<ApiResponse<List<ArchiveFileDTO>>> listArchives() {
         File folder = new File(ARCHIVE_DIR);
@@ -108,7 +99,6 @@ public class AuditController {
                 .filter(f -> f.getName().endsWith(".csv"))
                 .sorted(Comparator.comparing(File::getName).reversed())
                 .map(f -> {
-                    // Extraction de la date depuis le nom : audit_backup_20260330_233800.csv
                     LocalDateTime date = null;
                     try {
                         String namePart = f.getName()
@@ -117,10 +107,11 @@ public class AuditController {
                         date = LocalDateTime.parse(namePart, fmt);
                     } catch (Exception ignored) {}
 
-                    // Comptage des lignes (hors header)
+                    // ✅ FIX Internationalization — encodage UTF-8 explicite
                     int lines = 0;
-                    try (var br = new java.io.BufferedReader(new java.io.FileReader(f))) {
-                        lines = (int) br.lines().count() - 1; // -1 pour le header
+                    try (BufferedReader br = new BufferedReader(
+                            new FileReader(f, StandardCharsets.UTF_8))) {
+                        lines = (int) br.lines().count() - 1;
                         if (lines < 0) lines = 0;
                     } catch (Exception ignored) {}
 
@@ -131,19 +122,17 @@ public class AuditController {
         return ResponseEntity.ok(ApiResponse.success(files));
     }
 
-
-    //Permet à l'administrateur de télécharger un ancien log pour une consultation hors-ligne
     @GetMapping("/archives/download/{filename}")
     public ResponseEntity<Resource> downloadArchive(@PathVariable String filename) {
         try {
             Path filePath = Paths.get(ARCHIVE_DIR).resolve(filename).normalize();
-            // ✅ Maintenant 'Resource' est bien org.springframework.core.io.Resource
             Resource resource = new UrlResource(filePath.toUri());
 
             if (resource.exists()) {
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType("text/csv"))
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                        .header(HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=\"" + resource.getFilename() + "\"")
                         .body(resource);
             } else {
                 return ResponseEntity.notFound().build();

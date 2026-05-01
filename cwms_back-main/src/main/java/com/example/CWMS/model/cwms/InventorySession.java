@@ -3,6 +3,7 @@ package com.example.CWMS.model.cwms;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Entity
@@ -20,25 +21,15 @@ public class InventorySession {
     @Column(nullable = false)
     private String name;
 
-    /** Code magasin ERP (t_cwar) */
     @Column(name = "warehouse_code", nullable = false)
     private String warehouseCode;
 
     @Column(name = "warehouse_label")
     private String warehouseLabel;
 
-    /**
-     * Zone ERP optionnelle (t_zone de dbo_twhwmd300310).
-     * Permet de restreindre l'inventaire à une zone précise du magasin.
-     */
     @Column(name = "warehouse_zone", length = 3)
     private String warehouseZone;
 
-    /**
-     * Champs de collecte sélectionnés à la création de la session, stockés en JSON.
-     * Exemple : ["ARTICLE","LOT","QUANTITE"]
-     * Remplace le système de templates séparés.
-     */
     @Column(name = "collect_fields_json", length = 500)
     private String collectFieldsJson;
 
@@ -65,6 +56,13 @@ public class InventorySession {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         if (this.status == null) this.status = SessionStatus.EN_COURS;
+    }
+
+    // ✅ FIX SpotBugs — getter protégé pour @OneToMany
+    // Collections.unmodifiableList() empêche la modification externe
+    // Hibernate utilise sa propre collection en interne — pas d'impact
+    public List<CollectLine> getLines() {
+        return lines == null ? null : Collections.unmodifiableList(lines);
     }
 
     public enum SessionStatus {
