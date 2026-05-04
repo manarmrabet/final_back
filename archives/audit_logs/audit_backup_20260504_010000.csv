@@ -1,4 +1,2 @@
 ID;CreatedAt;User;Action;Type;Severity;Endpoint;Status;OldValue;NewValue
-100845;2026-04-19T19:02:12.617535;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""
-100846;2026-04-19T19:11:38.104229;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""
-100847;2026-04-19T20:39:36.872369;admin;MENU_DELETED;DELETE;INFO;null;null;"{'menuItemId':1010,'label':'archive transfert','icon':'folder','link':'transfers/archives','parent':null,'isTitle':false,'isLayout':false,'createdAt':'2026-03-31T00:10:27.730299','updatedAt':'2026-03-31T00:10:27.730299','roleMappings':[{'roleMenuMappingId':5068,'createdAt':'2026-04-15T23:56:22.397029','updatedAt':'2026-04-15T23:56:22.397029'}]}";""
+1259;2026-04-18T09:53:36.105507300;admin;CONNEXION_OK;LOGIN;INFO;null;200;"";""
