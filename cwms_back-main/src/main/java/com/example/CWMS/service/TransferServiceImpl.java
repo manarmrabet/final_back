@@ -38,13 +38,9 @@ public class TransferServiceImpl implements TransferService {
     private final ErpStockUpdater          erpStockUpdater;
 
     // ══════════════════════════════════════════════════════════════════════════
-    // ERP — MAGASINS ✅ AJOUTÉ
+    // ERP — MAGASINS
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Retourne la liste distincte des codes magasin (t_cwar) depuis dbo_twhinr1401200.
-     * Endpoint : GET /api/transfers/erp/warehouses
-     */
     @Override
     @Transactional(transactionManager = "erpTransactionManager", readOnly = true)
     public List<String> getDistinctWarehouses() {
@@ -66,7 +62,19 @@ public class TransferServiceImpl implements TransferService {
         return createTransferWithUser(request, operator, article);
     }
 
+    /**
+     * BUG 6 CORRIGÉ — @Transactional ajouté sur la méthode publique.
+     *
+     * Sans @Transactional ici, chaque appel interne à createTransferWithUser()
+     * (méthode protected) démarrait sa propre micro-transaction sans rollback
+     * global du batch en cas d'erreur partielle.
+     *
+     * Note : createTransferWithUser() reste @Transactional pour les appels directs
+     * depuis createTransfer(), mais le batch est désormais couvert par cette transaction
+     * parente — les appels internes participent à la même transaction (propagation REQUIRED).
+     */
     @Override
+    @Transactional
     public List<TransferResponseDTO> createTransferBatch(List<TransferRequestDTO> requests) {
         log.info("Batch transfert : {} lignes", requests.size());
         User operator = getCurrentUser();
@@ -192,15 +200,24 @@ public class TransferServiceImpl implements TransferService {
         return transferRepo.findAll(pageable).map(TransferResponseDTO::from);
     }
 
+    /**
+     * BUG 5 CORRIGÉ — ordre des paramètres aligné avec l'interface et le controller.
+     *
+     * Ancienne interface : search(status, operator, itemCode, location, from, to, pageable)
+     * Cette impl et le controller utilisaient déjà le bon ordre :
+     *   search(status, itemCode, location, operator, from, to, pageable)
+     *
+     * L'interface a été corrigée pour correspondre à cet ordre canonique.
+     */
     @Override
     @Transactional(readOnly = true)
-    public Page<TransferResponseDTO> search(String status, String itemCode, String location,String operator,
+    public Page<TransferResponseDTO> search(String status, String itemCode, String location, String operator,
                                             LocalDateTime from, LocalDateTime to, Pageable pageable) {
-        String s = blank(status)   ? null : status.trim();
-        String i = blank(itemCode) ? null : itemCode.trim();
-        String l = blank(location) ? null : location.trim();
+        String s  = blank(status)   ? null : status.trim();
+        String i  = blank(itemCode) ? null : itemCode.trim();
+        String l  = blank(location) ? null : location.trim();
         String op = blank(operator) ? null : operator.trim();
-        return transferRepo.search(s, i, l,op, from, to, pageable).map(TransferResponseDTO::from);
+        return transferRepo.search(s, i, l, op, from, to, pageable).map(TransferResponseDTO::from);
     }
 
     @Override
@@ -211,15 +228,9 @@ public class TransferServiceImpl implements TransferService {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // ERP — EMPLACEMENT ✅ CORRIGÉ
+    // ERP — EMPLACEMENT
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Récupère les informations d'un emplacement depuis dbo_twhwmd300310.
-     *
-     * CORRECTION : utilise findFirstByLocationCode() au lieu de
-     * findAllByWarehouseCode() qui cherchait par warehouse (pas par location).
-     */
     @Override
     @Transactional(transactionManager = "erpTransactionManager", readOnly = true)
     public ErpLocationDTO getLocationInfo(String locationCode) {
@@ -234,7 +245,6 @@ public class TransferServiceImpl implements TransferService {
                         .exists(true)
                         .build())
                 .orElseGet(() -> {
-                    // Emplacement absent de twhwmd300310 — fallback via stock ERP
                     List<ErpStock> stocks = erpStockRepo.findByLocation(locationCode.trim());
                     String warehouseCode = stocks.isEmpty()
                             ? null

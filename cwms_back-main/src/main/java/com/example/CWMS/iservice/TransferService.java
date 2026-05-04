@@ -33,24 +33,29 @@ public interface TransferService {
 
     Page<TransferResponseDTO> getAll(Pageable pageable);
 
+    /**
+     * BUG 5 CORRIGÉ — ordre des paramètres aligné avec TransferServiceImpl et TransferController.
+     *
+     * Ancienne signature (interface) : search(status, operator, itemCode, location, from, to, pageable)
+     * Impl et controller utilisaient : search(status, itemCode, location, operator, from, to, pageable)
+     *
+     * Un appel via proxy AOP ou mock de test aurait mélangé itemCode ↔ operator silencieusement.
+     * Ordre canonique désormais : status → itemCode → location → operator → from → to → pageable
+     */
     Page<TransferResponseDTO> search(
-            String status,
-            String operator,
-            String itemCode,
-            String location,
+            String        status,
+            String        itemCode,
+            String        location,
+            String        operator,
             LocalDateTime from,
             LocalDateTime to,
-            Pageable pageable
+            Pageable      pageable
     );
 
     Page<TransferResponseDTO> getMyTransfers(Integer operatorId, Pageable pageable);
 
     // ─── ERP Data ─────────────────────────────────────────────────────────────
 
-    /**
-     * ✅ AJOUTÉ — liste distincte des t_cwar depuis dbo_twhinr1401200.
-     * Endpoint : GET /api/transfers/erp/warehouses
-     */
     List<String> getDistinctWarehouses();
 
     ErpArticleDTO getArticleByCode(String itemCode);

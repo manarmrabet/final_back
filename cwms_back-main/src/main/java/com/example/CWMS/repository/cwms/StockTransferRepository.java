@@ -4,6 +4,7 @@ import com.example.CWMS.model.cwms.StockTransfer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -62,18 +63,6 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
         """)
     List<StockTransfer> findPendingByOperator(@Param("operatorId") Integer operatorId);
 
-    /**
-     * Recherche avancée avec filtre opérateur (LIKE insensible à la casse sur prénom+nom).
-     *
-     * Règles :
-     *   - Chaque param null  → filtre ignoré (pas de restriction)
-     *   - location           → cherche dans sourceLocation OU destLocation
-     *   - operator           → LIKE %:operator% sur CONCAT(firstName,' ',lastName)
-     *   - from/to            → borne createdAt inclusive
-     *
-     * ⚠️  CAST(t.status AS string) est nécessaire pour comparer un enum JPA
-     *     à un String passé en paramètre sous Hibernate 6+.
-     */
     @Query("""
         SELECT t FROM StockTransfer t
         LEFT JOIN t.operator op
@@ -98,16 +87,70 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
             Pageable           pageable
     );
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // ARCHIVAGE — JPQL PUR (zéro nativeQuery)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // POURQUOI JPQL et pas nativeQuery ?
+    //
+    // Sur SQL Server + Hibernate 6, les nativeQuery avec LocalDateTime ou
+    // String castée échouent SILENCIEUSEMENT : le driver envoie le paramètre
+    // sous un type non reconnu → 0 lignes, aucune exception → CSV vide.
+    //
+    // JPQL laisse Hibernate mapper LocalDateTime → datetime2 via son propre
+    // type system → fiable sur tous les drivers SQL Server.
+    //
+    // PAGINATION : on passe Pageable SANS Sort (PageRequest.of(page, size)).
+    // Le ORDER BY est dans la JPQL elle-même. Hibernate ne génère pas de
+    // clause ORDER BY supplémentaire si Pageable.getSort().isUnsorted() → true.
+    // Pas de bug "created_at.createdAt".
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * COUNT éligibles à l'archivage — JPQL, LocalDateTime natif.
+     */
+    @Query("""
+        SELECT COUNT(t) FROM StockTransfer t
+        WHERE t.createdAt >= :from
+          AND t.createdAt <= :to
+          AND CAST(t.status AS string) IN (:s1, :s2, :s3)
+        """)
+    long countForArchiveJpql(
+            @Param("from") LocalDateTime from,
+            @Param("to")   LocalDateTime to,
+            @Param("s1")   String        s1,
+            @Param("s2")   String        s2,
+            @Param("s3")   String        s3
+    );
+
+    /**
+     * Page de transferts éligibles — JPQL, Pageable SANS Sort.
+     * LEFT JOIN FETCH operator pour éviter N+1 lors de l'écriture CSV.
+     *
+     * Appelé avec PageRequest.of(page, BATCH_SIZE) — sans Sort.
+     */
     @Query("""
         SELECT t FROM StockTransfer t
-        WHERE t.createdAt >= :from AND t.createdAt <= :to
-          AND t.status IN :statuses
+        LEFT JOIN FETCH t.operator
+        WHERE t.createdAt >= :from
+          AND t.createdAt <= :to
+          AND CAST(t.status AS string) IN (:s1, :s2, :s3)
         ORDER BY t.createdAt ASC
         """)
-    List<StockTransfer> findTransfersForArchive(
-            @Param("from")     LocalDateTime from,
-            @Param("to")       LocalDateTime to,
-            @Param("statuses") List<StockTransfer.TransferStatus> statuses,
-            Pageable           pageable
+    List<StockTransfer> findForArchiveJpql(
+            @Param("from") LocalDateTime from,
+            @Param("to")   LocalDateTime to,
+            @Param("s1")   String        s1,
+            @Param("s2")   String        s2,
+            @Param("s3")   String        s3,
+            Pageable       pageable
     );
+
+    /**
+     * Suppression par batch d'IDs — JPQL DELETE.
+     * Batches ≤ 500 pour rester sous la limite de paramètres SQL Server (2100).
+     */
+    @Modifying
+    @Query("DELETE FROM StockTransfer t WHERE t.id IN :ids")
+    void deleteByIdIn(@Param("ids") List<Long> ids);
 }
