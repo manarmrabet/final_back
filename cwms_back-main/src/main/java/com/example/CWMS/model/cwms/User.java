@@ -88,7 +88,7 @@ public class User {
             columnDefinition = "boolean default false")
     private boolean credentialsSent = false;
 
-    // ✅ FIX SpotBugs — entités JPA @ManyToOne
+    // FIX SpotBugs — entités JPA @ManyToOne
     // Hibernate gère le cycle de vie — accesseurs explicites sans copie
     public void setRole(Role role) {
         this.role = role;

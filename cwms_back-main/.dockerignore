@@ -1,0 +1,41 @@
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# IDEs
+../.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Temporary files
+tmp/
+temp/
+
+# Docker
+cwms_back-main/Dockerfile
+docker-compose.yml
+
+# Node (if frontend files exist)
+node_modules/
+
+# Build caches
+.cache/
+
+# Coverage / tests
+coverage/

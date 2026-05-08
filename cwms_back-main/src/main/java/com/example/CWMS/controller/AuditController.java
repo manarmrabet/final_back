@@ -107,7 +107,7 @@ public class AuditController {
                         date = LocalDateTime.parse(namePart, fmt);
                     } catch (Exception ignored) {}
 
-                    // ✅ FIX Internationalization — encodage UTF-8 explicite
+                    //  encodage UTF-8 explicite
                     int lines = 0;
                     try (BufferedReader br = new BufferedReader(
                             new FileReader(f, StandardCharsets.UTF_8))) {

@@ -23,13 +23,15 @@ public class AuditLog {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Severity severity;
-
+//Évite le chargement inutile de l'entité User à chaque lecture de log
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "UserId")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private User user;
 
+
+    //Survit à la suppression de l'utilisateur
     @Column(length = 100)
     private String username;
 
@@ -75,9 +77,11 @@ public class AuditLog {
     @Column(name = "session_id", length = 200)
     private String sessionId;
 
+    //Permet de relier plusieurs logs d'une même opération
     @Column(name = "correlation_id", length = 100)
     private String correlationId;
 
+    //Horodatage automatique côté JPA, non modifiable
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -89,7 +93,7 @@ public class AuditLog {
     public enum EventType {
         LOGIN, LOGOUT, LOGIN_FAILED,
         CREATE, UPDATE, DELETE, READ,
-        CREATE_FAILED,   // ✅ nouveau : tentative échouée (email doublon, etc.)
+        CREATE_FAILED,   // tentative échouée (email doublon, etc.)
         ERROR, EXPORT, IMPORT
     }
 

@@ -25,7 +25,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     /**
      * Optimisation : On ne filtre pas les requêtes d'authentification
-     * ✅ Ajout : on exclut aussi les URLs Swagger (aucune logique modifiée)
+      on exclut aussi les URLs Swagger (aucune logique modifiée)
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {

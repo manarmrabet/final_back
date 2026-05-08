@@ -28,7 +28,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @Transactional
     void updateFailedAttempts(String username, int failAttempts);
 
-    // ✅ Pour delete normal : on met user_id à NULL dans audit_logs avant de supprimer
+    //  Pour delete normal : on met user_id à NULL dans audit_logs avant de supprimer
     @Modifying
     @Query(value = "UPDATE audit_logs SET user_id = NULL WHERE user_id = :userId", nativeQuery = true)
     void detachAuditLogs(@Param("userId") Integer userId);

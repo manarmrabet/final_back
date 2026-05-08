@@ -18,12 +18,13 @@ public class AuditAspect {
 
     private final AuditService       auditService;
     private final ApplicationContext applicationContext;
+//intercepte la méthode
 
     @Around("@annotation(auditable)")
     public Object audit(ProceedingJoinPoint joinPoint,
                         Auditable auditable) throws Throwable {
 
-        // ✅ Capturer l'ancienne valeur AVANT l'exécution
+        //  Capturer l'ancienne valeur AVANT l'exécution
         Object oldValue = captureOldValue(joinPoint, auditable);
 
         try {
@@ -71,7 +72,7 @@ public class AuditAspect {
                 return null;
             }
 
-            // ✅ Convention : "MenuItem" → "menuItemRepository"
+            //  Convention : "MenuItem" → "menuItemRepository"
             //                "User"     → "userRepository"
             //                "Role"     → "roleRepository"
             String entityType = auditable.entityType();

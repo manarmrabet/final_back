@@ -20,7 +20,7 @@ public class JwtUtils {
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
-    // ✅ FIX Performance — static final (constante de classe, pas d'instance)
+    //  Performance — static final (constante de classe, pas d'instance)
     private static final int JWT_EXPIRATION_MS = 86400000; // 24h
 
     private Key getKey() {

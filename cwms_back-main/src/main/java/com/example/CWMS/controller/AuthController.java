@@ -34,7 +34,7 @@ public class AuthController {
     private AuditServiceImpl auditService;
 
     @Autowired
-    private LoginAttemptServiceImpl loginAttemptService; // ✅ Injection pour la sécurité brute-force
+    private LoginAttemptServiceImpl loginAttemptService; //  Injection pour la sécurité brute-force
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest,
@@ -66,7 +66,7 @@ public class AuthController {
                     .map(item -> item.getAuthority())
                     .collect(Collectors.toList());
 
-            // ✅ Log connexion réussie dans l'Audit
+            //  Log connexion réussie dans l'Audit
             auditService.logLogin(username, ipAddress, userAgent, true, "Connexion réussie");
 
             return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getUsername(), roles));
@@ -80,7 +80,7 @@ public class AuthController {
                     ? "Identifiants incorrects. Il vous reste " + remaining + " tentative(s)."
                     : "Compte bloqué après trop de tentatives infructueuses.";
 
-            // ✅ Log échec connexion dans l'Audit
+            // Log échec connexion dans l'Audit
             auditService.logLogin(username, ipAddress, userAgent, false, errorMessage);
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorMessage);
@@ -99,7 +99,7 @@ public class AuthController {
     public ResponseEntity<?> logout(HttpServletRequest httpRequest) {
         String username = extractUsernameFromToken(httpRequest);
 
-        // ✅ Log déconnexion
+        //  Log déconnexion
         auditService.logLogout(
                 username,
                 extractIp(httpRequest),
