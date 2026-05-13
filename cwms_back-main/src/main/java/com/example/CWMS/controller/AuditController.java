@@ -1,13 +1,12 @@
 package com.example.CWMS.controller;
 
-import com.example.CWMS.dto.ApiResponse;
-import com.example.CWMS.dto.ArchiveFileDTO;
-import com.example.CWMS.dto.AuditLogDTO;
+import com.example.CWMS.dto.*;
 import com.example.CWMS.model.cwms.AuditLog.EventType;
 import com.example.CWMS.model.cwms.AuditLog.Severity;
 import com.example.CWMS.model.cwms.User;
 import com.example.CWMS.repository.cwms.AuditLogRepository;
 import com.example.CWMS.repository.cwms.UserRepository;
+import com.example.CWMS.service.ArchiveCsvParser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -140,5 +139,34 @@ public class AuditController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    // ── Ajouts dans AuditController ──────────────────────────────────────────
+
+    private final ArchiveCsvParser archiveCsvParser;
+
+    /**
+     * Recherche filtrée sur TOUTES les archives
+     * GET /api/audit/archives/search?username=&action=&eventType=&severity=&from=&to=
+     */
+    @GetMapping("/archives/search")
+    public ResponseEntity<ApiResponse<List<ArchiveLogDTO>>> searchAllArchives(
+            ArchiveFilterDTO filter) {
+
+        List<ArchiveLogDTO> results = archiveCsvParser.search(null, filter);
+        return ResponseEntity.ok(ApiResponse.success(results));
+    }
+
+    /**
+     * Recherche filtrée sur UNE archive précise
+     * GET /api/audit/archives/{filename}/search?username=&action=&eventType=...
+     */
+    @GetMapping("/archives/{filename}/search")
+    public ResponseEntity<ApiResponse<List<ArchiveLogDTO>>> searchOneArchive(
+            @PathVariable String filename,
+            ArchiveFilterDTO filter) {
+
+        List<ArchiveLogDTO> results = archiveCsvParser.search(filename, filter);
+        return ResponseEntity.ok(ApiResponse.success(results));
     }
 }
